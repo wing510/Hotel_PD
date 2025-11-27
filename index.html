@@ -117,20 +117,27 @@ label {
   margin: 0 0 6px;
 }
 
-    /* 下拉選單 */
-select { 
+/* 下拉選單 */
+select {
   width: 100%;
-  background: linear-gradient(135deg, #020617 0, #020617 60%, #020617 100%);
+  /* 關掉白底，直接用純深色 */
+  background-color: #020617;
+  background-image: none;
   color: #e5e7eb;
   border: 1px solid rgba(148,163,184,0.6);
   border-radius: 999px;
-  padding: 8px 14px;
+  padding: 6px 12px;
   font-size: 13px;
-  appearance: none;
+  appearance: none;  /* 隱藏系統預設樣式（含白底邊框） */
   outline: none;
-  box-shadow: 0 6px 18px rgba(15,23,42,0.7);
+  box-shadow: 0 4px 10px rgba(15,23,42,0.6);
 }
 
+/* 下拉選單展開後的每一個選項 */
+select option {
+  background-color: #020617;
+  color: #e5e7eb;
+}
     /* 表格 */
 table { 
   width: 100%;
@@ -675,6 +682,65 @@ td.num, th.num {
   }
 }
 
+
+/* 折線圖卡片標題列與左右箭頭 */
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.chart-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-btn {
+  border: 1px solid rgba(148,163,184,0.6);
+  background: rgba(15,23,42,0.9);
+  color: #e5e7eb;
+  border-radius: 999px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 0 4px 12px rgba(15,23,42,0.9);
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.nav-btn:hover {
+  background: rgba(30,64,175,0.95);
+  box-shadow: 0 6px 16px rgba(15,23,42,0.95);
+  transform: translateY(-1px);
+}
+
+.nav-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* 桌機專用箭頭（手機隱藏） */
+.desktop-only {
+  display: inline-flex;
+}
+
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none;
+  }
+
+  /* 手機上允許 chart-right 垂直捲動 + 水平滑動偵測 */
+  .chart-right {
+    touch-action: pan-y;
+  }
+}
 </style>
 </head>
 
@@ -769,7 +835,13 @@ td.num, th.num {
 
       <!-- 右側：折線圖 -->
       <div class="chart-right">
-        <h2 id="titleLine">營收/指標趨勢</h2>
+        <div class="chart-header">
+          <h2 id="titleLine">營收/指標趨勢</h2>
+          <div class="chart-nav desktop-only">
+            <button type="button" class="nav-btn nav-prev" aria-label="Previous period">‹</button>
+            <button type="button" class="nav-btn nav-next" aria-label="Next period">›</button>
+          </div>
+        </div>
         <canvas id="trendChart"></canvas>
       </div>
     </div>
@@ -1128,6 +1200,9 @@ td.num, th.num {
   const yearSel = document.getElementById('yearSel');
   const monthSel = document.getElementById('monthSel');
   const currencySel = document.getElementById('currencySel');
+  const trendCard = document.querySelector('.chart-right');
+  const navPrev = document.querySelector('.nav-btn.nav-prev');
+  const navNext = document.querySelector('.nav-btn.nav-next');
 
   // 改：收入多選 (button + checkbox)
   const metricBtn = document.getElementById('metricBtn');
@@ -1941,15 +2016,117 @@ td.num, th.num {
   }
 
   // ===== 事件監聽 =====
+
+  // 月份 / 年份切換（桌機箭頭 + 手機滑動共用）
+  function changePeriod(step) {
+    if (!RAW || !RAW.length) return;
+
+    const years = RAW
+      .map(r => parseYMD(r.Date)?.y)
+      .filter(y => typeof y === 'number' && !isNaN(y));
+
+    if (!years.length) return;
+
+    const minYear = Math.min(...years);
+    const maxYear = Math.max(...years);
+
+    const isYearMode = (monthSel.value === 'ALL');
+
+    // 目前年份：如果是 ALL，就以「今年在資料內」優先，否則用最小年份
+    const nowYear = new Date().getFullYear();
+    let yBase;
+    if (yearSel.value === 'ALL') {
+      yBase = years.includes(nowYear) ? nowYear : minYear;
+    } else {
+      yBase = Number(yearSel.value) || minYear;
+    }
+
+    let y = yBase;
+    let m = isYearMode ? 'ALL' : Number(monthSel.value) || 1;
+
+    if (isYearMode) {
+      // 年度模式：只改年份
+      y += step;
+      if (y < minYear) y = minYear;
+      if (y > maxYear) y = maxYear;
+      m = 'ALL';
+    } else {
+      // 月份模式：跨年連動
+      let ym = y * 12 + (m - 1) + step;
+      let newY = Math.floor(ym / 12);
+      let newM = ym % 12 + 1;
+
+      if (newY < minYear) {
+        newY = minYear;
+        newM = 1;
+      }
+      if (newY > maxYear) {
+        newY = maxYear;
+        newM = 12;
+      }
+      y = newY;
+      m = newM;
+    }
+
+    yearSel.value = String(y);
+    monthSel.value = isYearMode ? 'ALL' : String(m);
+
+    // 重新渲染表格 + 圖表
+    render();
+  }
+
   yearSel.addEventListener('change', render);
   monthSel.addEventListener('change', render);
   currencySel.addEventListener('change', render);
 
+  // 語系切換
   langSel.addEventListener('change', e=>{
     currentLang = e.target.value;
     updateLangUI();
     render();
   });
+
+  // 折線圖：桌機箭頭切換
+  if (navPrev) {
+    navPrev.addEventListener('click', () => changePeriod(-1));
+  }
+  if (navNext) {
+    navNext.addEventListener('click', () => changePeriod(1));
+  }
+
+  // 手機版：在折線圖卡片上左右滑動切換月份 / 年份
+  if (trendCard) {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+
+    trendCard.addEventListener('touchstart', (e) => {
+      const t = e.touches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+      touchStartTime = Date.now();
+    }, { passive: true });
+
+    trendCard.addEventListener('touchend', (e) => {
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
+      const dt = Date.now() - touchStartTime;
+
+      // 基本條件：時間不要太久、位移夠大且主要是左右滑
+      if (dt > 600) return;
+      if (Math.abs(dx) < 40) return;
+      if (Math.abs(dx) < Math.abs(dy)) return;
+
+      if (dx < 0) {
+        // 往左滑 → 下一個月 / 下一年
+        changePeriod(1);
+      } else {
+        // 往右滑 → 上一個月 / 上一年
+        changePeriod(-1);
+      }
+    }, { passive: true });
+  }
 
   // 每 30 分鐘自動更新匯率
   setInterval(updateRates, 30*60*1000);

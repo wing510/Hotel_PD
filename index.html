@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>酒店業績儀表板</title>
+  <title>HOTEL_PDv40</title>
 
   <!-- 引入 Chart.js (繪製圖表用) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -269,6 +269,11 @@ td.num, th.num {
     .chart-left h2, .chart-right h2 { 
       font-size: 16px;
       margin: 6px 0;
+    }
+    .chart-left h2 {
+      text-align: left;
+    }
+    .chart-right h2 {
       text-align: center;
     }
 
@@ -741,6 +746,27 @@ td.num, th.num {
     touch-action: pan-y;
   }
 }
+
+/* 手機版：更多欄位 + 月份/年份箭頭列 */
+.mobile-cols-bar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-cols-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 8px 0;
+  }
+  .mobile-nav-arrows {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
 </style>
 </head>
 
@@ -846,10 +872,16 @@ td.num, th.num {
       </div>
     </div>
 
-    <!-- 手機版：展開/收合欄位按鈕 -->
-    <button id="toggleColsBtn" class="mobile-only" style="margin-bottom:8px;">
-      更多欄位 ▼
-    </button>
+    <!-- 手機版：展開/收合欄位按鈕 + 月份/年份箭頭 -->
+    <div class="mobile-cols-bar">
+      <button id="toggleColsBtn" class="mobile-only">
+        更多欄位 ▼
+      </button>
+      <div class="mobile-nav-arrows mobile-only">
+        <button type="button" class="nav-btn m-nav-prev" aria-label="Previous period">‹</button>
+        <button type="button" class="nav-btn m-nav-next" aria-label="Next period">›</button>
+      </div>
+    </div>
 
     <!-- 資料表格 -->
     <table id="dataTable">
@@ -1722,6 +1754,18 @@ td.num, th.num {
 
     const isDaily = (mode === 'daily');
 
+    // 更新折線圖標題，顯示目前的年/月區間 (YYYY-All 或 YYYY-MM)
+    (function updateLineTitle(){
+      const L = LANGS[currentLang];
+      let yText = yearSel.value === 'ALL' ? 'ALL' : yearSel.value;
+      let mVal = monthSel.value;
+      let mText = (mVal === 'ALL') ? 'All' : String(mVal).padStart(2,'0');
+      const title = document.getElementById("titleLine");
+      if (title) {
+        title.textContent = `${L.chartTitles.line} (${yText}-${mText})`;
+      }
+    })();
+
     // 小工具：建立 <th>
     function addTh(tr, text, {num=false, extra=false} = {}){
       const th = document.createElement('th');
@@ -2142,6 +2186,12 @@ td.num, th.num {
       toggleColsBtn.textContent = on ? '收合欄位 ▲' : '更多欄位 ▼';
     });
   }
+
+  // 手機版：更多欄位列右側箭頭切換月份 / 年份
+  const mNavPrev = document.querySelector('.m-nav-prev');
+  const mNavNext = document.querySelector('.m-nav-next');
+  if (mNavPrev) mNavPrev.addEventListener('click', () => changePeriod(-1));
+  if (mNavNext) mNavNext.addEventListener('click', () => changePeriod(1));
 
   // 視窗尺寸改變 → 重新渲染（150ms 防抖）
   let _rzTimer = null;

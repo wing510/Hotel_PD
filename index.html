@@ -1491,6 +1491,7 @@ td.num, th.num {
             suggestedMax: undefined,
             grace: '5%',
             ticks: {
+              color: "#e5e7eb",
               callback: function(value) {
                 if (value >= 1_000_000_000) {
                   const v = value/1_000_000_000;
@@ -1508,15 +1509,23 @@ td.num, th.num {
               maxTicksLimit: TICK_LIMIT,
               font: { size: 12 },
               padding: 0
+            },
+            grid: {
+              color: "rgba(148, 163, 184, 0.35)",
+              lineWidth: 1
             }
           },
           yRight:{ 
             type:'linear',
             position:'right',
             beginAtZero:true,
-            grid:{ drawOnChartArea:false },
+            grid:{ 
+              drawOnChartArea:false,
+              color: "rgba(148, 163, 184, 0.25)"
+            },
             grace: '5%',
             ticks: {
+              color: "#e5e7eb",
               callback: function(value) {
                 if (value >= 1_000_000_000) {
                   const v = value/1_000_000_000;
@@ -1541,19 +1550,32 @@ td.num, th.num {
             position:'right',
             min:0,
             max:100,
-            grid:{ drawOnChartArea:false },
+            grid:{ 
+              drawOnChartArea:false,
+              color: "rgba(148, 163, 184, 0.2)"
+            },
             afterBuildTicks(scale){
               const ticks = [];
               for(let v=0; v<=100; v+=10) ticks.push({ value:v });
               scale.ticks = ticks;
             },
             ticks:{
+              color: "#e5e7eb",
               autoSkip: false,
               callback: v => v,
               maxRotation: 0,
               minRotation: 0
             },
             grace: 6
+          },
+          x: {
+            ticks: {
+              color: "#e5e7eb",
+              font: { size: 11 }
+            },
+            grid: {
+              color: "rgba(148, 163, 184, 0.25)"
+            }
           }
         }
       }

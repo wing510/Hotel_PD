@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HOTEL_PDv40</title>
+  <title>HOTEL_PDv43</title>
 
   <!-- 引入 Chart.js (繪製圖表用) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -56,28 +56,39 @@ font-weight: 600;
   letter-spacing: 0.04em;
 }
 
-    /* 三條槓按鈕（預設桌機隱藏） */
-    .menu-toggle {
-  display: none;
-  width: 34px;
-  height: 30px;
-  border-radius: 999px;
-  border: 1px solid rgba(148,163,184,0.7);
-  background: radial-gradient(circle at top, #020617 0, #020617 60%, #020617 100%);
-  padding: 4px 6px;
+
+/* 三條槓按鈕 */
+.menu-toggle {
+  display: none; 
+  flex-direction: column;
+  width: 28px;
+  height: 24px;
+  padding: 0;
   box-sizing: border-box;
   cursor: pointer;
+  
+  /* 讓內容上下左右置中 */
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 22px rgba(15,23,42,0.9);
+  background: transparent;  
+  border: none; 
+  box-shadow: none; 
 }
+
 .menu-toggle span {
   display: block;
-  width: 100%;
   height: 2px;
   background: #e5e7eb;
-  margin: 3px 0;
+  margin: 2px 0;      
+  
+  border-radius: 1px;
   transition: transform 0.2s, opacity 0.2s;
+}
+
+.menu-toggle span:nth-child(1),
+.menu-toggle span:nth-child(2),
+.menu-toggle span:nth-child(3) {
+  width: 14px !important;
 }
 
     /* 開啟狀態的三條槓變成 X（可有可無） */
@@ -633,10 +644,7 @@ td.num, th.num {
   }
 
   /* 下拉選單的 checkbox 列表也縮小 */
-  .dropdown-content label {
-    padding: 4px 6px !important;
-    font-size: 12px !important;
-  }
+  
 }
 
 
@@ -703,6 +711,21 @@ td.num, th.num {
   gap: 4px;
 }
 
+.mode-toggle {
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.6);
+  background: transparent;
+  color: #e5e7eb;
+  font-size: 11px;
+  padding: 0 10px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(15,23,42,0.7);
+}
+
 .nav-btn {
   border: 1px solid rgba(148,163,184,0.6);
   background: rgba(15,23,42,0.9);
@@ -748,24 +771,21 @@ td.num, th.num {
 }
 
 /* 手機版：更多欄位 + 月份/年份箭頭列 */
-.mobile-cols-bar {
-  display: none;
+@media (max-width: 768px) {
 }
 
-@media (max-width: 768px) {
-  .mobile-cols-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin: 8px 0;
-  }
-  .mobile-nav-arrows {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
+/* 表格上方：More Columns + 年/月 + 左右箭頭 列 */
+.table-nav-bar {
+  margin: 10px 0 6px;
 }
+
+.table-nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* 左：欄位按鈕，右：Y/‹/› */
+  gap: 8px;
+}
+
 
 </style>
 </head>
@@ -863,7 +883,8 @@ td.num, th.num {
       <div class="chart-right">
         <div class="chart-header">
           <h2 id="titleLine">營收/指標趨勢</h2>
-          <div class="chart-nav desktop-only">
+          <div class="chart-nav">
+            <button type="button" class="mode-toggle" aria-label="切換年/月模式"></button>
             <button type="button" class="nav-btn nav-prev" aria-label="Previous period">‹</button>
             <button type="button" class="nav-btn nav-next" aria-label="Next period">›</button>
           </div>
@@ -872,16 +893,22 @@ td.num, th.num {
       </div>
     </div>
 
-    <!-- 手機版：展開/收合欄位按鈕 + 月份/年份箭頭 -->
-    <div class="mobile-cols-bar">
-      <button id="toggleColsBtn" class="mobile-only">
-        更多欄位 ▼
-      </button>
-      <div class="mobile-nav-arrows mobile-only">
-        <button type="button" class="nav-btn m-nav-prev" aria-label="Previous period">‹</button>
-        <button type="button" class="nav-btn m-nav-next" aria-label="Next period">›</button>
-      </div>
+<!-- 表格上方：More Columns + 年/月 + 左右箭頭（同一行） -->
+<div class="table-nav-bar">
+  <div class="table-nav-inner">
+    <!-- 手機才顯示 More Columns，桌機隱藏 -->
+    <button id="toggleColsBtn" class="mobile-only">
+      More Columns ▼
+    </button>
+
+    <!-- 右側年/月 + 左右箭頭（桌機＋手機共用） -->
+    <div class="chart-nav">
+      <button type="button" class="mode-toggle" aria-label="切換年/月模式"></button>
+      <button type="button" class="nav-btn nav-prev" aria-label="Previous period">‹</button>
+      <button type="button" class="nav-btn nav-next" aria-label="Next period">›</button>
     </div>
+  </div>
+</div>
 
     <!-- 資料表格 -->
     <table id="dataTable">
@@ -1023,6 +1050,10 @@ td.num, th.num {
         pie: "收入來源", 
         line: "營收/指標趨勢" 
       },
+      modeLabels: {
+        year: "年",
+        month: "月"
+      },
       table: { 
         weekday: "星期", 
         date: "日期", 
@@ -1068,6 +1099,10 @@ td.num, th.num {
       chartTitles: { 
         pie: "Revenue Sources", 
         line: "Revenue/Indicators Trend" 
+      },
+      modeLabels: {
+        year: "Year",
+        month: "Month"
       },
       table: { 
         weekday: "Day", 
@@ -1115,6 +1150,10 @@ td.num, th.num {
         pie: "Sumber Pendapatan", 
         line: "Tren Pendapatan/Indikator" 
       },
+      modeLabels: {
+        year: "Tahun",
+        month: "Bulan"
+      },
       table: { 
         weekday: "Hari", 
         date: "Tanggal", 
@@ -1154,8 +1193,31 @@ td.num, th.num {
                     (navigator.language.startsWith("en")) ? "en" : "zh";
 
   // ===== 語言 UI 更新 =====
-  function updateLangUI(){
+  
+  // 依目前語言重建月份下拉選單（ALL, 1~12）
+  function rebuildMonthOptions() {
+    if (!monthSel) return;
+    const oldVal = monthSel.value;
+
+    monthSel.innerHTML =
+      `<option value="ALL">ALL</option>` +
+      Array.from({ length: 12 }, (_, i) => {
+        const m = i + 1;
+        return `<option value="${m}">${monthLabel(m)}</option>`;
+      }).join('');
+
+    // 還原原本選擇的值（如果仍存在）
+    if (oldVal) {
+      const exists = Array.from(monthSel.options).some(o => o.value === oldVal);
+      if (exists) monthSel.value = oldVal;
+    }
+  }
+
+function updateLangUI(){
     const L = LANGS[currentLang];
+
+    // 語言變更時，同步重建 Month 下拉選單
+    rebuildMonthOptions();
     document.getElementById("pageTitle").textContent = L.title;
     document.getElementById("lblYear").textContent = L.filters.year;
     document.getElementById("lblMonth").textContent = L.filters.month;
@@ -1193,6 +1255,9 @@ td.num, th.num {
     // 指標（住房率% / 平均房價）多選清單
     document.getElementById("lblMetric2").textContent = (currentLang==='zh') ? "指標" : (currentLang==='en' ? "Indicators" : "Indikator");
     initIndicatorList();  // 生成指標 checkbox
+
+    // 更新年/月切換按鈕文字
+    updateModeToggleLabels();
   }
 
   // ===== 收入欄位定義 =====
@@ -1233,8 +1298,22 @@ td.num, th.num {
   const monthSel = document.getElementById('monthSel');
   const currencySel = document.getElementById('currencySel');
   const trendCard = document.querySelector('.chart-right');
-  const navPrev = document.querySelector('.nav-btn.nav-prev');
-  const navNext = document.querySelector('.nav-btn.nav-next');
+
+  // 記錄最近使用的「月份」（切換年/月模式時會用到）
+  let lastMonthSel = null;
+
+  // 更新所有年/月切換按鈕的文字
+  function updateModeToggleLabels() {
+    const L = LANGS[currentLang];
+    const isYearMode = (monthSel.value === 'ALL');
+    let label = isYearMode ? '年' : '月';
+    if (L.modeLabels) {
+      label = isYearMode ? L.modeLabels.year : L.modeLabels.month;
+    }
+    document.querySelectorAll('.mode-toggle').forEach(btn => {
+      btn.textContent = label;
+    });
+  }
 
   // 改：收入多選 (button + checkbox)
   const metricBtn = document.getElementById('metricBtn');
@@ -1766,6 +1845,9 @@ td.num, th.num {
       }
     })();
 
+    // 更新年/月切換按鈕的文字
+    updateModeToggleLabels();
+
     // 小工具：建立 <th>
     function addTh(tr, text, {num=false, extra=false} = {}){
       const th = document.createElement('th');
@@ -2115,12 +2197,44 @@ td.num, th.num {
     yearSel.value = String(y);
     monthSel.value = isYearMode ? 'ALL' : String(m);
 
+    if (monthSel.value !== 'ALL') {
+      lastMonthSel = monthSel.value;
+    }
+
     // 重新渲染表格 + 圖表
     render();
   }
 
+
+  // 年 / 月 模式切換（所有 .mode-toggle 共用）
+  function toggleYearMonthMode() {
+    if (!RAW || !RAW.length) {
+      return;
+    }
+    // 切換成「月模式」
+    if (monthSel.value === 'ALL') {
+      // 優先用最近一次選過的月份，否則用本月
+      let target = lastMonthSel;
+      if (!target) {
+        target = String(new Date().getMonth() + 1);
+      }
+      monthSel.value = target;
+      lastMonthSel = monthSel.value;
+    } else {
+      // 從「月模式」切回「年模式」
+      lastMonthSel = monthSel.value;
+      monthSel.value = 'ALL';
+    }
+    render();
+  }
+
   yearSel.addEventListener('change', render);
-  monthSel.addEventListener('change', render);
+  monthSel.addEventListener('change', () => {
+    if (monthSel.value !== 'ALL') {
+      lastMonthSel = monthSel.value;
+    }
+    render();
+  });
   currencySel.addEventListener('change', render);
 
   // 語系切換
@@ -2129,14 +2243,6 @@ td.num, th.num {
     updateLangUI();
     render();
   });
-
-  // 折線圖：桌機箭頭切換
-  if (navPrev) {
-    navPrev.addEventListener('click', () => changePeriod(-1));
-  }
-  if (navNext) {
-    navNext.addEventListener('click', () => changePeriod(1));
-  }
 
   // 手機版：在折線圖卡片上左右滑動切換月份 / 年份
   if (trendCard) {
@@ -2183,15 +2289,22 @@ td.num, th.num {
   if (toggleColsBtn) {
     toggleColsBtn.addEventListener('click', () => {
       const on = document.body.classList.toggle('show-more-cols');
-      toggleColsBtn.textContent = on ? '收合欄位 ▲' : '更多欄位 ▼';
+      toggleColsBtn.textContent = on ? 'Close ▲' : 'More ▼';
     });
   }
 
-  // 手機版：更多欄位列右側箭頭切換月份 / 年份
-  const mNavPrev = document.querySelector('.m-nav-prev');
-  const mNavNext = document.querySelector('.m-nav-next');
-  if (mNavPrev) mNavPrev.addEventListener('click', () => changePeriod(-1));
-  if (mNavNext) mNavNext.addEventListener('click', () => changePeriod(1));
+  // 所有上一月 / 下一月按鈕（桌機 + 手機共用）
+  document.querySelectorAll('.nav-prev').forEach(btn => {
+    btn.addEventListener('click', () => changePeriod(-1));
+  });
+  document.querySelectorAll('.nav-next').forEach(btn => {
+    btn.addEventListener('click', () => changePeriod(1));
+  });
+
+  // 所有年/月切換按鈕（桌機 + 手機共用）
+  document.querySelectorAll('.mode-toggle').forEach(btn => {
+    btn.addEventListener('click', toggleYearMonthMode);
+  });
 
   // 視窗尺寸改變 → 重新渲染（150ms 防抖）
   let _rzTimer = null;

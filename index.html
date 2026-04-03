@@ -2548,18 +2548,39 @@ function updateLangUI(){
   // 年 / 月 模式切換（所有 .mode-toggle 共用）
   function toggleYearMonthMode() {
     if (!RAW || !RAW.length) return;
-    if (usingRangeFilter()) return;
+    // 有起迄年月時，先清除區間再切換（避免「月/年」跟區間概念衝突）
+    if (usingRangeFilter()) {
+      if (periodStart) periodStart.value = '';
+      if (periodEnd) periodEnd.value = '';
+    }
 
     const yr = getYearRange();
     const ms = getMonthFilterSet();
 
-    if (yr && yr.startYear === yr.endYear && ms === null) {
+    // 若目前沒指定年份，先給一個預設年份（資料內最大年或今年）
+    const yb = getYearBounds();
+    let baseYear = yb ? yb.maxYear : new Date().getFullYear();
+    if (yb && baseYear < yb.minYear) baseYear = yb.minYear;
+    if (yb && baseYear > yb.maxYear) baseYear = yb.maxYear;
+
+    // 視為「年模式」：單一年份 + 月份未勾（ms === null）
+    const isYearMode = (yr && yr.startYear === yr.endYear && ms === null);
+    // 視為「月模式」：單一年份 + 單一月份（ms.size === 1）
+    const isMonthMode = (yr && yr.startYear === yr.endYear && ms && ms.size === 1);
+
+    if (isYearMode) {
       const y = yr.startYear;
       const m = Number(lastMonthSel) || (new Date().getMonth() + 1);
       setSingleYearMonth(y, m);
-    } else if (yr && yr.startYear === yr.endYear && ms && ms.size === 1) {
+    } else if (isMonthMode) {
       lastMonthSel = String([...ms][0]);
       setSingleYearAllMonths(yr.startYear);
+    } else {
+      // 其他狀態（例如年份區間未填、或年份區間跨年、或勾了多個月）
+      // 一律先收斂到「單一年份」的年模式，再切成月模式
+      setSingleYearAllMonths(yr ? yr.startYear : baseYear);
+      const m = Number(lastMonthSel) || (new Date().getMonth() + 1);
+      setSingleYearMonth(yr ? yr.startYear : baseYear, m);
     }
     render();
   }

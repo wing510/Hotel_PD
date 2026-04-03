@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HOTEL_PDv43</title>
+  <title>HOTEL_PDv44</title>
 
   <!-- 引入 Chart.js (繪製圖表用) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -375,6 +375,124 @@ td.num, th.num {
     }
     .dropdown.show .dropdown-content { display: block; }
 
+    .dropdown-content.period-panel {
+      /* 期間面板：加長（可視高度更大）、也稍加寬避免擁擠 */
+      max-height: min(78vh, 560px);
+      min-width: 240px;
+      right: auto;
+      padding: 8px 10px;
+    }
+    .period-section { margin-bottom: 10px; }
+    .period-h {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .period-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .period-row.period-year-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .period-row label {
+      display: flex !important;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .period-row input[type="month"] {
+      color: #e5e7eb;
+      background: #0f172a;
+      border: 1px solid rgba(148,163,184,0.5);
+      border-radius: 8px;
+      padding: 5px 8px;
+      font-size: 12px;
+    }
+    .period-row input[type="number"] {
+      color: #e5e7eb;
+      background: #0f172a;
+      border: 1px solid rgba(148,163,184,0.5);
+      border-radius: 8px;
+      padding: 5px 8px;
+      font-size: 12px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .period-clear {
+      margin-top: 8px;
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.55);
+      background: transparent;
+      color: #e5e7eb;
+      cursor: pointer;
+    }
+    .period-clear:hover {
+      background: rgba(148,163,184,0.12);
+    }
+    .period-divider {
+      height: 1px;
+      background: rgba(148,163,184,0.22);
+      margin: 10px 0;
+    }
+    .period-hint {
+      font-size: 10px;
+      color: #64748b;
+      margin: 0 0 8px 0;
+      line-height: 1.35;
+    }
+    .period-check-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 10px;
+    }
+    .period-check-grid label {
+      display: inline-flex !important;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 6px !important;
+      border-radius: 6px;
+    }
+
+    /* 月份複選：固定一行 3 個，避免面板過寬 */
+    #monthCheckList.period-check-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px 10px;
+    }
+    #monthCheckList.period-check-grid label {
+      width: 100%;
+      justify-content: flex-start;
+      white-space: nowrap; /* 10-12 月兩位數不換行 */
+    }
+
+    /* 手機版：期間面板不要超出側邊欄 */
+    @media (max-width: 768px) {
+      .dropdown-content.period-panel {
+        min-width: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-width: 100%;
+        max-height: 78vh;
+        box-sizing: border-box;
+      }
+      .period-row input[type="month"] {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .period-check-grid label {
+        padding: 4px 6px !important;
+      }
+    }
+
     /* 手機版：側邊欄遮罩（點一下可以關閉菜單） */
     #sideOverlay {
       display: none;
@@ -504,8 +622,8 @@ td.num, th.num {
 .filters {
   position: fixed;
   top: 0;
-  left: -280px;          /* 預設藏在左邊 */
-  width: 260px;
+  left: -340px;          /* 預設藏在左邊（要 >= width） */
+  width: 320px;
   height: 100vh;
   background: radial-gradient(circle at top, #020617 0, #020617 55%, #020617 100%);
   box-shadow: 2px 0 24px rgba(15,23,42,0.95);
@@ -821,16 +939,36 @@ td.num, th.num {
         <!-- 手機版右上角關閉按鈕 X -->
         <button class="close-filter-btn" type="button"
                 onclick="document.body.classList.remove('menu-open')">×</button>
-        <!-- 年份選單 -->
+        <!-- 期間：起迄年月 + 年/月複選（同收入下拉） -->
         <div class="card">
-          <label id="lblYear" for="yearSel">年份</label>
-          <select id="yearSel"></select>
-        </div>
-
-        <!-- 月份選單 -->
-        <div class="card">
-          <label id="lblMonth" for="monthSel">月份</label>
-          <select id="monthSel"></select>
+          <label id="lblPeriod" for="periodBtn">期間</label>
+          <div class="dropdown" id="periodDropdown">
+            <button id="periodBtn" type="button">—</button>
+            <div id="periodPanel" class="dropdown-content period-panel">
+              <p class="period-hint" id="periodHint"></p>
+              <div class="period-section">
+                <div class="period-h" id="lblPeriodRange"></div>
+                <div class="period-row">
+                  <label><span id="lblPeriodStart"></span> <input type="month" id="periodStart" autocomplete="off"></label>
+                  <label><span id="lblPeriodEnd"></span> <input type="month" id="periodEnd" autocomplete="off"></label>
+                </div>
+                <button type="button" class="period-clear" id="periodRangeClear"></button>
+              </div>
+              <div class="period-divider"></div>
+              <div class="period-section">
+                <div class="period-h" id="lblPeriodYears"></div>
+                <div class="period-row period-year-row">
+                  <label><span id="lblPeriodYearStart"></span> <input type="number" id="periodYearStart" inputmode="numeric" min="1900" max="2100" step="1" placeholder="YYYY" autocomplete="off"></label>
+                  <label><span id="lblPeriodYearEnd"></span> <input type="number" id="periodYearEnd" inputmode="numeric" min="1900" max="2100" step="1" placeholder="YYYY" autocomplete="off"></label>
+                </div>
+                <button type="button" class="period-clear" id="periodYearClear"></button>
+              </div>
+              <div class="period-section">
+                <div class="period-h" id="lblPeriodMonths"></div>
+                <div id="monthCheckList" class="period-check-grid"></div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 貨幣選單 -->
@@ -1042,6 +1180,17 @@ td.num, th.num {
       filters: { 
         year: "年份", 
         month: "月份", 
+        period: "期間",
+        periodRange: "起迄年月",
+        periodStart: "起始",
+        periodEnd: "結束",
+        periodClear: "清除區間",
+        periodYears: "年份區間",
+        periodYearStart: "起年",
+        periodYearEnd: "迄年",
+        periodYearClear: "清除年份",
+        periodMonths: "月份（複選）",
+        periodHint: "若已填「起始」與「結束」年月，以區間為準。未填起迄年月時，會套用「年份區間」與「月份複選」。留空＝不限制該項。",
         currency: "貨幣", 
         metric: "收入", 
         lang: "語言" 
@@ -1092,6 +1241,17 @@ td.num, th.num {
       filters: { 
         year: "Year", 
         month: "Month", 
+        period: "Period",
+        periodRange: "From — To",
+        periodStart: "Start",
+        periodEnd: "End",
+        periodClear: "Clear range",
+        periodYears: "Year range",
+        periodYearStart: "From",
+        periodYearEnd: "To",
+        periodYearClear: "Clear years",
+        periodMonths: "Months (multi)",
+        periodHint: "If both start and end month are set, the month range applies. Otherwise, year range + month checkboxes are used. Empty = no filter on that axis.",
         currency: "Currency", 
         metric: "Revenue", 
         lang: "Language" 
@@ -1142,6 +1302,17 @@ td.num, th.num {
       filters: { 
         year: "Tahun", 
         month: "Bulan", 
+        period: "Periode",
+        periodRange: "Dari — Sampai",
+        periodStart: "Mulai",
+        periodEnd: "Akhir",
+        periodClear: "Hapus rentang",
+        periodYears: "Rentang tahun",
+        periodYearStart: "Mulai",
+        periodYearEnd: "Sampai",
+        periodYearClear: "Hapus tahun",
+        periodMonths: "Bulan (multi)",
+        periodHint: "Jika bulan mulai & akhir diisi, rentang bulan dipakai. Jika tidak, rentang tahun + centang bulan dipakai. Kosong = tidak memfilter.",
         currency: "Mata Uang", 
         metric: "Pendapatan", 
         lang: "Bahasa" 
@@ -1193,37 +1364,27 @@ td.num, th.num {
                     (navigator.language.startsWith("en")) ? "en" : "zh";
 
   // ===== 語言 UI 更新 =====
-  
-  // 依目前語言重建月份下拉選單（ALL, 1~12）
-  function rebuildMonthOptions() {
-    if (!monthSel) return;
-    const oldVal = monthSel.value;
-
-    monthSel.innerHTML =
-      `<option value="ALL">ALL</option>` +
-      Array.from({ length: 12 }, (_, i) => {
-        const m = i + 1;
-        return `<option value="${m}">${monthLabel(m)}</option>`;
-      }).join('');
-
-    // 還原原本選擇的值（如果仍存在）
-    if (oldVal) {
-      const exists = Array.from(monthSel.options).some(o => o.value === oldVal);
-      if (exists) monthSel.value = oldVal;
-    }
-  }
 
 function updateLangUI(){
     const L = LANGS[currentLang];
 
-    // 語言變更時，同步重建 Month 下拉選單
-    rebuildMonthOptions();
+    rebuildPeriodMonthChecks();
     document.getElementById("pageTitle").textContent = L.title;
-    document.getElementById("lblYear").textContent = L.filters.year;
-    document.getElementById("lblMonth").textContent = L.filters.month;
+    document.getElementById("lblPeriod").textContent = L.filters.period;
+    document.getElementById("lblPeriodRange").textContent = L.filters.periodRange;
+    document.getElementById("lblPeriodStart").textContent = L.filters.periodStart;
+    document.getElementById("lblPeriodEnd").textContent = L.filters.periodEnd;
+    document.getElementById("periodRangeClear").textContent = L.filters.periodClear;
+    document.getElementById("lblPeriodYears").textContent = L.filters.periodYears;
+    document.getElementById("lblPeriodYearStart").textContent = L.filters.periodYearStart;
+    document.getElementById("lblPeriodYearEnd").textContent = L.filters.periodYearEnd;
+    document.getElementById("periodYearClear").textContent = L.filters.periodYearClear;
+    document.getElementById("lblPeriodMonths").textContent = L.filters.periodMonths;
+    const ph = document.getElementById("periodHint");
+    if (ph) ph.textContent = L.filters.periodHint;
     document.getElementById("lblCurrency").textContent = L.filters.currency;
     document.getElementById("lblMetric").textContent = L.filters.metric;
-    document.getElementById("lblLang").textContent = L.filters.lang;
+    document.getElementById("lblLang").textContent = "Language";
     document.getElementById("titlePie").textContent = L.chartTitles.pie;
     document.getElementById("titleLine").textContent = L.chartTitles.line;
     document.getElementById("noteRate").textContent = getNoteText(currentLang);
@@ -1258,6 +1419,7 @@ function updateLangUI(){
 
     // 更新年/月切換按鈕文字
     updateModeToggleLabels();
+    updatePeriodButtonText();
   }
 
   // ===== 收入欄位定義 =====
@@ -1294,21 +1456,173 @@ function updateLangUI(){
   let RAW = [];
 
   // 抓取主要 DOM 元素
-  const yearSel = document.getElementById('yearSel');
-  const monthSel = document.getElementById('monthSel');
+  const periodBtn = document.getElementById('periodBtn');
+  const periodDropdown = document.getElementById('periodDropdown');
+  const periodStart = document.getElementById('periodStart');
+  const periodEnd = document.getElementById('periodEnd');
+  const periodYearStart = document.getElementById('periodYearStart');
+  const periodYearEnd = document.getElementById('periodYearEnd');
+  const monthCheckList = document.getElementById('monthCheckList');
   const currencySel = document.getElementById('currencySel');
   const trendCard = document.querySelector('.chart-right');
 
   // 記錄最近使用的「月份」（切換年/月模式時會用到）
   let lastMonthSel = null;
 
+  function ymSortKey(y, m) { return y * 100 + m; }
+
+  function keyToYM(k) {
+    const y = Math.floor(k / 100);
+    const m = k % 100;
+    return { y, m };
+  }
+
+  function parseMonthInput(str) {
+    const p = String(str || '').split('-');
+    if (p.length < 2) return null;
+    const y = Number(p[0]), m = Number(p[1]);
+    if (!y || !m || m < 1 || m > 12) return null;
+    return { y, m };
+  }
+
+  function addMonthsKey(k, delta) {
+    const { y, m } = keyToYM(k);
+    let tot = y * 12 + (m - 1) + delta;
+    const ny = Math.floor(tot / 12);
+    const nm = (tot % 12) + 1;
+    return ymSortKey(ny, nm);
+  }
+
+  function setMonthInput(el, k) {
+    if (!el) return;
+    const { y, m } = keyToYM(k);
+    el.value = `${y}-${String(m).padStart(2, '0')}`;
+  }
+
+  function getRangeBounds() {
+    if (!periodStart || !periodEnd) return null;
+    if (!periodStart.value || !periodEnd.value) return null;
+    let a = parseMonthInput(periodStart.value);
+    let b = parseMonthInput(periodEnd.value);
+    if (!a || !b) return null;
+    let ka = ymSortKey(a.y, a.m), kb = ymSortKey(b.y, b.m);
+    if (ka > kb) { const t = ka; ka = kb; kb = t; }
+    return { startKey: ka, endKey: kb };
+  }
+
+  function usingRangeFilter() {
+    return getRangeBounds() !== null;
+  }
+
+  function getYearBounds() {
+    const years = RAW
+      .map(r => parseYMD(r.Date)?.y)
+      .filter(y => typeof y === 'number' && !isNaN(y));
+    if (!years.length) return null;
+    return { minYear: Math.min(...years), maxYear: Math.max(...years) };
+  }
+
+  function getYearRange() {
+    if (!periodYearStart || !periodYearEnd) return null;
+    const b = getYearBounds();
+    if (!b) return null;
+    const aRaw = periodYearStart.value;
+    const zRaw = periodYearEnd.value;
+    if (!aRaw && !zRaw) return null;
+    let a = aRaw ? Number(aRaw) : b.minYear;
+    let z = zRaw ? Number(zRaw) : b.maxYear;
+    if (!a || !z) return null;
+    if (a > z) { const t = a; a = z; z = t; }
+    return { startYear: a, endYear: z };
+  }
+
+  function getMonthFilterSet() {
+    if (!monthCheckList) return null;
+    const checked = Array.from(monthCheckList.querySelectorAll('input:checked')).map(i => Number(i.value));
+    if (checked.length === 0) return null;
+    return new Set(checked);
+  }
+
+  function rowMatchesPeriod(t) {
+    const k = ymSortKey(t.y, t.m);
+    const rb = getRangeBounds();
+    if (rb) return k >= rb.startKey && k <= rb.endKey;
+    const yr = getYearRange();
+    const ms = getMonthFilterSet();
+    if (yr && (t.y < yr.startYear || t.y > yr.endYear)) return false;
+    if (ms && !ms.has(t.m)) return false;
+    return true;
+  }
+
+  function getDataYmBounds() {
+    let minK = Infinity, maxK = -Infinity;
+    for (const r of RAW) {
+      const t = parseYMD(r.Date);
+      if (!t) continue;
+      const k = ymSortKey(t.y, t.m);
+      if (k < minK) minK = k;
+      if (k > maxK) maxK = k;
+    }
+    return { minK, maxK };
+  }
+
+  function rebuildPeriodMonthChecks() {
+    if (!monthCheckList) return;
+    const prev = new Set(
+      Array.from(monthCheckList.querySelectorAll('input:checked')).map(i => Number(i.value))
+    );
+    monthCheckList.innerHTML = Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1;
+      return `<label><input type="checkbox" value="${m}"> ${monthLabel(m)}</label>`;
+    }).join('');
+    monthCheckList.querySelectorAll('input').forEach(cb => {
+      if (prev.has(Number(cb.value))) cb.checked = true;
+      cb.addEventListener('change', () => { render(); updatePeriodButtonText(); });
+    });
+  }
+
+  function updatePeriodButtonText() {
+    if (!periodBtn) return;
+    const rb = getRangeBounds();
+    if (rb) {
+      const a = keyToYM(rb.startKey), b = keyToYM(rb.endKey);
+      periodBtn.textContent = `${a.y}-${String(a.m).padStart(2, '0')}～${b.y}-${String(b.m).padStart(2, '0')}`;
+      return;
+    }
+    const yr = getYearRange();
+    const ms = getMonthFilterSet();
+    const yTxt = yr
+      ? (yr.startYear === yr.endYear ? String(yr.startYear) : `${yr.startYear}～${yr.endYear}`)
+      : (currentLang === 'zh' ? '全部年份' : currentLang === 'en' ? 'All years' : 'Semua tahun');
+    const mTxt = ms ? [...ms].sort((a, b) => a - b).map(m => monthLabel(m)).join('、')
+      : (currentLang === 'zh' ? '全部月份' : currentLang === 'en' ? 'All months' : 'Semua bulan');
+    periodBtn.textContent = `${yTxt} · ${mTxt}`;
+  }
+
+  function setSingleYearMonth(y, m) {
+    if (periodYearStart) periodYearStart.value = String(y);
+    if (periodYearEnd) periodYearEnd.value = String(y);
+    if (monthCheckList) {
+      monthCheckList.querySelectorAll('input').forEach(i => { i.checked = Number(i.value) === m; });
+    }
+    lastMonthSel = String(m);
+  }
+
+  function setSingleYearAllMonths(y) {
+    if (periodYearStart) periodYearStart.value = String(y);
+    if (periodYearEnd) periodYearEnd.value = String(y);
+    if (monthCheckList) {
+      monthCheckList.querySelectorAll('input').forEach(i => { i.checked = false; });
+    }
+  }
+
   // 更新所有年/月切換按鈕的文字
   function updateModeToggleLabels() {
     const L = LANGS[currentLang];
-    const isYearMode = (monthSel.value === 'ALL');
-    let label = isYearMode ? '年' : '月';
+    const daily = (currentMode() === 'daily');
+    let label = daily ? '月' : '年';
     if (L.modeLabels) {
-      label = isYearMode ? L.modeLabels.year : L.modeLabels.month;
+      label = daily ? L.modeLabels.month : L.modeLabels.year;
     }
     document.querySelectorAll('.mode-toggle').forEach(btn => {
       btn.textContent = label;
@@ -1466,19 +1780,33 @@ function updateLangUI(){
     return LANGS[currentLang].months(m); 
   }
 
-  // 判斷模式
-  function currentMode(){ 
-    return (yearSel.value!=='ALL' && monthSel.value!=='ALL') ? 'daily':'agg'; 
+  // 判斷模式（單一曆月＝日明細；否則為月匯總）
+  function currentMode() {
+    const rb = getRangeBounds();
+    if (rb) return (rb.startKey === rb.endKey) ? 'daily' : 'agg';
+    const yr = getYearRange();
+    const ms = getMonthFilterSet();
+    if (yr && yr.startYear === yr.endYear && ms && ms.size === 1) return 'daily';
+    return 'agg';
+  }
+
+  function getDailyYM() {
+    const rb = getRangeBounds();
+    if (rb && rb.startKey === rb.endKey) return keyToYM(rb.startKey);
+    const yr = getYearRange();
+    const ms = getMonthFilterSet();
+    if (yr && yr.startYear === yr.endYear && ms && ms.size === 1) {
+      return { y: yr.startYear, m: [...ms][0] };
+    }
+    return null;
   }
 
   // 過濾資料
-  function filterData(){ 
-    const yv = yearSel.value, mv = monthSel.value; 
-    return RAW.filter(r => { 
-      const t = parseYMD(r.Date); 
-      if(!t) return false; 
-      return (yv==='ALL'||t.y==yv) && (mv==='ALL'||t.m==mv); 
-    }); 
+  function filterData() {
+    return RAW.filter(r => {
+      const t = parseYMD(r.Date);
+      return t && rowMatchesPeriod(t);
+    });
   }
 
   // ===== 自訂外掛：在 yPercent 軸的 100 上方標註 "(%)" =====
@@ -1513,11 +1841,17 @@ function updateLangUI(){
     let labels = [], dayRows = [], groups = [];
 
     if(mode === 'daily'){
-      const yv = Number(yearSel.value), mv = Number(monthSel.value);
-      dayRows = rows
-        .filter(r => { const t = parseYMD(r.Date); return t && t.y === yv && t.m == mv; })
-        .sort((a,b) => parseYMD(a.Date).d - parseYMD(b.Date).d);
-      labels = dayRows.map(r => parseYMD(r.Date).d + "");
+      const dm = getDailyYM();
+      if (!dm) {
+        dayRows = [];
+        labels = [];
+      } else {
+        const yv = dm.y, mv = dm.m;
+        dayRows = rows
+          .filter(r => { const t = parseYMD(r.Date); return t && t.y === yv && t.m === mv; })
+          .sort((a,b) => parseYMD(a.Date).d - parseYMD(b.Date).d);
+        labels = dayRows.map(r => parseYMD(r.Date).d + "");
+      }
     } else {
       const map = new Map();
       for(const r of rows){
@@ -1533,7 +1867,9 @@ function updateLangUI(){
         for(const c of EXTRA_COLS) g.extras[c.key] += toNumber(r[c.key]);
       }
       groups = Array.from(map.values()).sort((a,b)=>a.y-b.y || a.m-b.m);
-      labels = groups.map(g => monthLabel(g.m));
+      const distinctY = new Set(groups.map(g => g.y));
+      const showY = distinctY.size > 1;
+      labels = groups.map(g => showY ? `${g.y}/${monthLabel(g.m)}` : monthLabel(g.m));
     }
 
     const datasets = [];
@@ -1821,6 +2157,7 @@ function updateLangUI(){
 
   // ===== 表格渲染 =====
   function render(){
+    updatePeriodButtonText();
     const rows = filterData();
     const mode = currentMode();
     const cur  = currencySel.value;
@@ -1836,12 +2173,9 @@ function updateLangUI(){
     // 更新折線圖標題，顯示目前的年/月區間 (YYYY-All 或 YYYY-MM)
     (function updateLineTitle(){
       const L = LANGS[currentLang];
-      let yText = yearSel.value === 'ALL' ? 'ALL' : yearSel.value;
-      let mVal = monthSel.value;
-      let mText = (mVal === 'ALL') ? 'All' : String(mVal).padStart(2,'0');
       const title = document.getElementById("titleLine");
       if (title) {
-        title.textContent = `${L.chartTitles.line} (${yText}-${mText})`;
+        title.textContent = `${L.chartTitles.line} (${periodBtn ? periodBtn.textContent : ''})`;
       }
     })();
 
@@ -1929,13 +2263,15 @@ function updateLangUI(){
     grand['RNO Budget'] = 0;
 
     if (isDaily) {
-      const yv = Number(yearSel.value), mv = monthSel.value;
-      const dayRows = rows
-        .filter(r => {
-          const t = parseYMD(r.Date);
-          return t && t.y === yv && (mv === "ALL" || t.m == mv);
-        })
-        .sort((a,b) => parseYMD(a.Date).d - parseYMD(b.Date).d);
+      const dm = getDailyYM();
+      const dayRows = dm
+        ? rows
+            .filter(r => {
+              const t = parseYMD(r.Date);
+              return t && t.y === dm.y && t.m === dm.m;
+            })
+            .sort((a,b) => parseYMD(a.Date).d - parseYMD(b.Date).d)
+        : [];
 
       for (const r of dayRows) {
         const t = parseYMD(r.Date);
@@ -2124,14 +2460,27 @@ function updateLangUI(){
       return;
     }
 
-    // 填入年份 / 月份
-    const years=[...new Set(RAW.map(r=>parseYMD(r.Date)?.y).filter(Boolean))].sort();
-    yearSel.innerHTML = `<option value="ALL">ALL</option>` + years.map(y=>`<option>${y}</option>`).join('');
-    monthSel.innerHTML = `<option value="ALL">ALL</option>` + Array.from({length:12},(_,i)=>`<option value="${i+1}">${monthLabel(i+1)}</option>`).join('');
-    // 預設值：今年 + ALL 月份
-    const thisYear = new Date().getFullYear();
-    yearSel.value = thisYear;
-    monthSel.value = "ALL";
+    if (periodStart) periodStart.value = '';
+    if (periodEnd) periodEnd.value = '';
+    if (periodYearStart) periodYearStart.value = '';
+    if (periodYearEnd) periodYearEnd.value = '';
+    const { minK, maxK } = getDataYmBounds();
+    if (isFinite(minK) && isFinite(maxK) && periodStart && periodEnd) {
+      const lo = keyToYM(minK), hi = keyToYM(maxK);
+      const smin = `${lo.y}-${String(lo.m).padStart(2, '0')}`;
+      const smax = `${hi.y}-${String(hi.m).padStart(2, '0')}`;
+      periodStart.min = smin;
+      periodStart.max = smax;
+      periodEnd.min = smin;
+      periodEnd.max = smax;
+    }
+    const yb = getYearBounds();
+    if (yb && periodYearStart && periodYearEnd) {
+      periodYearStart.min = String(yb.minYear);
+      periodYearStart.max = String(yb.maxYear);
+      periodYearEnd.min = String(yb.minYear);
+      periodYearEnd.max = String(yb.maxYear);
+    }
 
     updateLangUI();
     initMetricList();   // ✅ 新增
@@ -2146,95 +2495,111 @@ function updateLangUI(){
   // 月份 / 年份切換（桌機箭頭 + 手機滑動共用）
   function changePeriod(step) {
     if (!RAW || !RAW.length) return;
+    const { minK, maxK } = getDataYmBounds();
+    if (!isFinite(minK) || !isFinite(maxK)) return;
 
-    const years = RAW
-      .map(r => parseYMD(r.Date)?.y)
-      .filter(y => typeof y === 'number' && !isNaN(y));
-
-    if (!years.length) return;
-
-    const minYear = Math.min(...years);
-    const maxYear = Math.max(...years);
-
-    const isYearMode = (monthSel.value === 'ALL');
-
-    // 目前年份：如果是 ALL，就以「今年在資料內」優先，否則用最小年份
-    const nowYear = new Date().getFullYear();
-    let yBase;
-    if (yearSel.value === 'ALL') {
-      yBase = years.includes(nowYear) ? nowYear : minYear;
-    } else {
-      yBase = Number(yearSel.value) || minYear;
-    }
-
-    let y = yBase;
-    let m = isYearMode ? 'ALL' : Number(monthSel.value) || 1;
-
-    if (isYearMode) {
-      // 年度模式：只改年份
-      y += step;
-      if (y < minYear) y = minYear;
-      if (y > maxYear) y = maxYear;
-      m = 'ALL';
-    } else {
-      // 月份模式：跨年連動
-      let ym = y * 12 + (m - 1) + step;
-      let newY = Math.floor(ym / 12);
-      let newM = ym % 12 + 1;
-
-      if (newY < minYear) {
-        newY = minYear;
-        newM = 1;
+    const rb = getRangeBounds();
+    if (rb) {
+      let ns = addMonthsKey(rb.startKey, step);
+      let ne = addMonthsKey(rb.endKey, step);
+      if (ns < minK) {
+        const d = minK - ns;
+        ns += d;
+        ne += d;
       }
-      if (newY > maxYear) {
-        newY = maxYear;
-        newM = 12;
+      if (ne > maxK) {
+        const d = ne - maxK;
+        ns -= d;
+        ne -= d;
       }
-      y = newY;
-      m = newM;
+      setMonthInput(periodStart, ns);
+      setMonthInput(periodEnd, ne);
+      updatePeriodButtonText();
+      render();
+      return;
     }
 
-    yearSel.value = String(y);
-    monthSel.value = isYearMode ? 'ALL' : String(m);
-
-    if (monthSel.value !== 'ALL') {
-      lastMonthSel = monthSel.value;
+    const dm = getDailyYM();
+    if (dm) {
+      let k = ymSortKey(dm.y, dm.m);
+      k = addMonthsKey(k, step);
+      if (k < minK) k = minK;
+      if (k > maxK) k = maxK;
+      const { y, m } = keyToYM(k);
+      setSingleYearMonth(y, m);
+      render();
+      return;
     }
 
-    // 重新渲染表格 + 圖表
-    render();
+    const yr = getYearRange();
+    const ms = getMonthFilterSet();
+    if (yr && yr.startYear === yr.endYear && ms === null) {
+      const yb = getYearBounds();
+      if (!yb) return;
+      let y = yr.startYear + step;
+      if (y < yb.minYear) y = yb.minYear;
+      if (y > yb.maxYear) y = yb.maxYear;
+      setSingleYearAllMonths(y);
+      render();
+      return;
+    }
   }
-
 
   // 年 / 月 模式切換（所有 .mode-toggle 共用）
   function toggleYearMonthMode() {
-    if (!RAW || !RAW.length) {
-      return;
-    }
-    // 切換成「月模式」
-    if (monthSel.value === 'ALL') {
-      // 優先用最近一次選過的月份，否則用本月
-      let target = lastMonthSel;
-      if (!target) {
-        target = String(new Date().getMonth() + 1);
-      }
-      monthSel.value = target;
-      lastMonthSel = monthSel.value;
-    } else {
-      // 從「月模式」切回「年模式」
-      lastMonthSel = monthSel.value;
-      monthSel.value = 'ALL';
+    if (!RAW || !RAW.length) return;
+    if (usingRangeFilter()) return;
+
+    const yr = getYearRange();
+    const ms = getMonthFilterSet();
+
+    if (yr && yr.startYear === yr.endYear && ms === null) {
+      const y = yr.startYear;
+      const m = Number(lastMonthSel) || (new Date().getMonth() + 1);
+      setSingleYearMonth(y, m);
+    } else if (yr && yr.startYear === yr.endYear && ms && ms.size === 1) {
+      lastMonthSel = String([...ms][0]);
+      setSingleYearAllMonths(yr.startYear);
     }
     render();
   }
 
-  yearSel.addEventListener('change', render);
-  monthSel.addEventListener('change', () => {
-    if (monthSel.value !== 'ALL') {
-      lastMonthSel = monthSel.value;
-    }
-    render();
-  });
+  if (periodBtn && periodDropdown && !periodBtn._pBound) {
+    periodBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      periodDropdown.classList.toggle('show');
+    });
+    periodBtn._pBound = true;
+  }
+  if (!window._periodDocBound && periodDropdown) {
+    document.addEventListener('click', (e) => {
+      if (!periodDropdown.contains(e.target)) periodDropdown.classList.remove('show');
+    });
+    window._periodDocBound = true;
+  }
+  if (periodStart) periodStart.addEventListener('change', () => { render(); updatePeriodButtonText(); });
+  if (periodEnd) periodEnd.addEventListener('change', () => { render(); updatePeriodButtonText(); });
+  const periodRangeClear = document.getElementById('periodRangeClear');
+  if (periodRangeClear) {
+    periodRangeClear.addEventListener('click', () => {
+      if (periodStart) periodStart.value = '';
+      if (periodEnd) periodEnd.value = '';
+      render();
+      updatePeriodButtonText();
+    });
+  }
+  if (periodYearStart) periodYearStart.addEventListener('input', () => { render(); updatePeriodButtonText(); });
+  if (periodYearEnd) periodYearEnd.addEventListener('input', () => { render(); updatePeriodButtonText(); });
+  const periodYearClear = document.getElementById('periodYearClear');
+  if (periodYearClear) {
+    periodYearClear.addEventListener('click', () => {
+      if (periodYearStart) periodYearStart.value = '';
+      if (periodYearEnd) periodYearEnd.value = '';
+      render();
+      updatePeriodButtonText();
+    });
+  }
+
   currencySel.addEventListener('change', render);
 
   // 語系切換

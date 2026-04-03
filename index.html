@@ -105,7 +105,8 @@ font-weight: 600;
     /* 篩選器區域：設定 6 欄格局，並加上間距 */
     .filters { 
       display: grid;
-      grid-template-columns: repeat(6, minmax(140px, 1fr));
+      /* 桌機：依實際項目數自動平均分配寬度 */
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 12px;
     }
 
@@ -138,7 +139,9 @@ select {
   border: 1px solid rgba(148,163,184,0.6);
   border-radius: 999px;
   padding: 6px 12px;
+  height: 36px;
   font-size: 13px;
+  line-height: 1.2;
   appearance: none;  /* 隱藏系統預設樣式（含白底邊框） */
   outline: none;
   box-shadow: 0 4px 10px rgba(15,23,42,0.6);
@@ -240,11 +243,15 @@ td.num, th.num {
   background: radial-gradient(circle at top, #020617 0, #020617 55%, #020617 100%);
   border: 1px solid rgba(148,163,184,0.45);
   box-shadow: 0 20px 45px rgba(15,23,42,0.9);
+  box-sizing: border-box; /* 避免手機寬度 + padding 溢出被切 */
 }
 
 .chart-left { 
   flex: 3;
   order: 1;
+  /* 圓餅圖卡片上下留白縮小一點 */
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 
 .chart-right { 
@@ -256,19 +263,30 @@ td.num, th.num {
 .chart-left h2, .chart-right h2 { 
   font-size: 14px;
   margin: 4px 0 10px;
-  text-align: left;
+  text-align: center;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #9ca3af;
 }
 
+.chart-subtitle{
+  margin: 0;
+  font-size: 12px;
+  color: rgba(148,163,184,0.95);
+  line-height: 1.2;
+  white-space: normal;
+  text-align: center;
+}
 
+/* (reverted) pie HTML legend removed */
     /* 圓餅圖 canvas 自適應 */
     .chart-left canvas {
       width: 100% !important;   /* 寬度隨容器調整 */
       height: auto !important;  /* 高度保持比例 */
       max-width: none;          /* 不限制最大寬度 */
     }
+
+    /* 圓餅圖高度：桌機不要固定，避免比例怪 */
 
     /* 折線圖 canvas 自適應（讓 Chart.js 控制高度比例）*/
     .chart-right canvas {
@@ -338,8 +356,10 @@ td.num, th.num {
   background: linear-gradient(135deg, #020617 0, #020617 60%, #020617 100%);
   border: 1px solid rgba(148,163,184,0.6);
   border-radius: 999px;
-  padding: 8px 14px;
+  padding: 6px 12px;
+  height: 36px;
   font-size: 13px;
+  line-height: 1.2;
   text-align: left;
   color: #e5e7eb;
   box-shadow: 0 6px 18px rgba(15,23,42,0.7);
@@ -436,6 +456,18 @@ td.num, th.num {
     }
     .period-clear:hover {
       background: rgba(148,163,184,0.12);
+    }
+    .period-clear-row{
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .period-clear-row .period-clear{
+      flex: 1 1 0;
+      margin-top: 0;
+      padding: 5px 10px;
+      font-size: 12px;
+      white-space: nowrap;
     }
     .period-divider {
       height: 1px;
@@ -588,8 +620,11 @@ td.num, th.num {
       .chart-right {
         order: 1;
         flex: none;
-        width: 95%;
+        width: 100%;
+        max-width: 100%;
         margin: 0 auto;
+        padding-left: 10px;
+        padding-right: 10px;
       }
       .chart-right canvas { width: 100% !important; }
 
@@ -597,13 +632,34 @@ td.num, th.num {
       .chart-left {
         order: 2;
         flex: none;
-        width: 95%;
+        width: 100%;
+        max-width: 100%;
         margin: 0 auto;
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 10px;
+        padding-bottom: 10px;
       }
+      #pieChart{ height: 200px !important; }
 
       /* 標題字體縮小 */
       h1 {  
         font-size: 18px; 
+      }
+      .chart-left h2,
+      .chart-right h2{
+        font-size: 13px !important;
+        text-align: center !important;
+        margin: 4px 0 6px !important;
+        letter-spacing: 0.06em;
+      }
+      .chart-titles h2{
+        text-align: center !important;
+      }
+      .chart-subtitle{
+        font-size: 11px;
+        margin-bottom: 8px;
+        text-align: center;
       }
 
       /* 表格字體縮小 */
@@ -823,6 +879,18 @@ td.num, th.num {
   margin-bottom: 8px;
 }
 
+.chart-titles{
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-titles h2{
+  margin: 0 0 6px;
+  text-align: center;
+}
+
 .chart-nav {
   display: flex;
   align-items: center;
@@ -961,7 +1029,10 @@ td.num, th.num {
                   <label><span id="lblPeriodYearStart"></span> <input type="number" id="periodYearStart" inputmode="numeric" min="1900" max="2100" step="1" placeholder="YYYY" autocomplete="off"></label>
                   <label><span id="lblPeriodYearEnd"></span> <input type="number" id="periodYearEnd" inputmode="numeric" min="1900" max="2100" step="1" placeholder="YYYY" autocomplete="off"></label>
                 </div>
-                <button type="button" class="period-clear" id="periodYearClear"></button>
+                <div class="period-clear-row">
+                  <button type="button" class="period-clear" id="periodYearClear"></button>
+                  <button type="button" class="period-clear" id="periodMonthClear"></button>
+                </div>
               </div>
               <div class="period-section">
                 <div class="period-h" id="lblPeriodMonths"></div>
@@ -1013,14 +1084,20 @@ td.num, th.num {
     <div class="charts">
       <!-- 左側：圓餅圖 -->
       <div class="chart-left">
-        <h2 id="titlePie">收入來源</h2>
+        <div class="chart-titles">
+          <h2 id="titlePie">收入來源</h2>
+          <div id="subTitlePie" class="chart-subtitle"></div>
+        </div>
         <canvas id="pieChart"></canvas>
       </div>
 
       <!-- 右側：折線圖 -->
       <div class="chart-right">
         <div class="chart-header">
-          <h2 id="titleLine">營收/指標趨勢</h2>
+          <div class="chart-titles">
+            <h2 id="titleLine">營收/指標趨勢</h2>
+            <div id="subTitleLine" class="chart-subtitle"></div>
+          </div>
           <div class="chart-nav">
             <button type="button" class="mode-toggle" aria-label="切換年/月模式"></button>
             <button type="button" class="nav-btn nav-prev" aria-label="Previous period">‹</button>
@@ -1184,11 +1261,12 @@ td.num, th.num {
         periodRange: "起迄年月",
         periodStart: "起始",
         periodEnd: "結束",
-        periodClear: "清除區間",
+        periodClear: "清除區間(全部年份，全部月份)",
         periodYears: "年份區間",
         periodYearStart: "起年",
         periodYearEnd: "迄年",
         periodYearClear: "清除年份",
+        periodMonthClear: "清除月份",
         periodMonths: "月份（複選）",
         periodHint: "若已填「起始」與「結束」年月，以區間為準。未填起迄年月時，會套用「年份區間」與「月份複選」。留空＝不限制該項。",
         currency: "貨幣", 
@@ -1245,11 +1323,12 @@ td.num, th.num {
         periodRange: "From — To",
         periodStart: "Start",
         periodEnd: "End",
-        periodClear: "Clear range",
+        periodClear: "Clear range (all years, all months)",
         periodYears: "Year range",
         periodYearStart: "From",
         periodYearEnd: "To",
         periodYearClear: "Clear years",
+        periodMonthClear: "Clear months",
         periodMonths: "Months (multi)",
         periodHint: "If both start and end month are set, the month range applies. Otherwise, year range + month checkboxes are used. Empty = no filter on that axis.",
         currency: "Currency", 
@@ -1306,11 +1385,12 @@ td.num, th.num {
         periodRange: "Dari — Sampai",
         periodStart: "Mulai",
         periodEnd: "Akhir",
-        periodClear: "Hapus rentang",
+        periodClear: "Hapus rentang (semua tahun & semua bulan)",
         periodYears: "Rentang tahun",
         periodYearStart: "Mulai",
         periodYearEnd: "Sampai",
         periodYearClear: "Hapus tahun",
+        periodMonthClear: "Hapus bulan",
         periodMonths: "Bulan (multi)",
         periodHint: "Jika bulan mulai & akhir diisi, rentang bulan dipakai. Jika tidak, rentang tahun + centang bulan dipakai. Kosong = tidak memfilter.",
         currency: "Mata Uang", 
@@ -1380,6 +1460,7 @@ function updateLangUI(){
     document.getElementById("lblPeriodYearEnd").textContent = L.filters.periodYearEnd;
     document.getElementById("periodYearClear").textContent = L.filters.periodYearClear;
     document.getElementById("lblPeriodMonths").textContent = L.filters.periodMonths;
+    document.getElementById("periodMonthClear").textContent = L.filters.periodMonthClear;
     const ph = document.getElementById("periodHint");
     if (ph) ph.textContent = L.filters.periodHint;
     document.getElementById("lblCurrency").textContent = L.filters.currency;
@@ -1809,7 +1890,7 @@ function updateLangUI(){
     });
   }
 
-  // ===== 自訂外掛：在 yPercent 軸的 100 上方標註 "(%)" =====
+  // ===== 自訂外掛：在 yPercent 軸下方標註 "(Occ%)" =====
   const percentNotePlugin = {
     id: 'percentNote',
     afterDraw(chart) {
@@ -1817,16 +1898,13 @@ function updateLangUI(){
       if (!y) return;
       const ctx = chart.ctx;
 
-      // 100 對應到的 y 像素位置（越小越上面）
-      const y100 = y.getPixelForValue(100);
-
-      // 在右側軸的內側，100 的稍上方放 "(Occ%)"
       ctx.save();
       ctx.fillStyle = '#666';
       ctx.font = '12px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans", sans-serif';
       ctx.textAlign = 'right';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText('(Occ%)', y.right - 0, y100 - 22);
+      ctx.textBaseline = 'top';
+      // 放在右側 % 軸的底部內側（靠近 0 的位置）
+      ctx.fillText('(Occ%)', y.right - 0, y.bottom + 6);
       ctx.restore();
     }
   };
@@ -1869,7 +1947,11 @@ function updateLangUI(){
       groups = Array.from(map.values()).sort((a,b)=>a.y-b.y || a.m-b.m);
       const distinctY = new Set(groups.map(g => g.y));
       const showY = distinctY.size > 1;
-      labels = groups.map(g => showY ? `${g.y}/${monthLabel(g.m)}` : monthLabel(g.m));
+      labels = groups.map(g => {
+        if (!showY) return monthLabel(g.m);
+        const yy = String(g.y).slice(-2);
+        return `${yy}/${monthLabel(g.m)}`;
+      });
     }
 
     const datasets = [];
@@ -1975,7 +2057,8 @@ function updateLangUI(){
         responsive: true,
         maintainAspectRatio: true,           // 交給比例算高度
         aspectRatio: isMobile ? 1.2 : 2,     // 手機高一點，桌機維持 2:1
-        layout: { padding: { left:16, right:16, top:4, bottom:4 } },
+        // 讓繪圖區更貼近左右邊（提升可用寬度）
+        layout: { padding: { left: (isMobile ? 0 : 6), right: (isMobile ? 0 : 6), top:4, bottom:4 } },
 
         plugins:{
           legend:{ 
@@ -2128,6 +2211,8 @@ function updateLangUI(){
       },
       options:{ 
         responsive: true, 
+        maintainAspectRatio: !window.matchMedia('(max-width: 768px)').matches,
+        layout: { padding: { top: 0, bottom: 0, left: 0, right: 0 } },
         onClick: (evt, elements) => {
           if(!elements.length) return;
           const idx = elements[0].index;
@@ -2142,7 +2227,7 @@ function updateLangUI(){
         plugins:{ 
           legend:{ 
             position:"right", 
-            labels:{ boxWidth:12, font:{size:14} } 
+            labels:{ boxWidth:12, font:{size:12}, padding: 8 } 
           } 
         } 
       }
@@ -2150,9 +2235,15 @@ function updateLangUI(){
 
     // 在標題顯示總收入
     const totalIncome = pieData.reduce((a,b)=>a+b,0);
-    document.getElementById("titlePie").textContent = 
-      LANGS[currentLang].chartTitles.pie + 
-      " (" + LANGS[currentLang].table.total + "：" + cur + " " + formatCurrency(totalIncome, cur) + ")";
+    const pieTitle = document.getElementById("titlePie");
+    const pieSub = document.getElementById("subTitlePie");
+    if (pieTitle) pieTitle.textContent = LANGS[currentLang].chartTitles.pie;
+    if (pieSub) {
+      const prefix = (currentLang === 'en') ? 'Total: '
+                   : (currentLang === 'id') ? 'Total: '
+                   : '總收入：';
+      pieSub.textContent = `${prefix}${cur} ${formatCurrency(totalIncome, cur)}`;
+    }
   } // ← 結束 renderCharts()
 
   // ===== 表格渲染 =====
@@ -2174,8 +2265,14 @@ function updateLangUI(){
     (function updateLineTitle(){
       const L = LANGS[currentLang];
       const title = document.getElementById("titleLine");
-      if (title) {
-        title.textContent = `${L.chartTitles.line} (${periodBtn ? periodBtn.textContent : ''})`;
+      const sub = document.getElementById("subTitleLine");
+      const ptxt = periodBtn ? periodBtn.textContent : '';
+      if (title) title.textContent = L.chartTitles.line;
+      if (sub) {
+        const prefix = (currentLang === 'en') ? 'Period: '
+                     : (currentLang === 'id') ? 'Periode: '
+                     : '期間：';
+        sub.textContent = ptxt ? (prefix + ptxt) : '';
       }
     })();
 
@@ -2605,6 +2702,11 @@ function updateLangUI(){
     periodRangeClear.addEventListener('click', () => {
       if (periodStart) periodStart.value = '';
       if (periodEnd) periodEnd.value = '';
+      if (periodYearStart) periodYearStart.value = '';
+      if (periodYearEnd) periodYearEnd.value = '';
+      if (monthCheckList) {
+        monthCheckList.querySelectorAll('input').forEach(i => { i.checked = false; });
+      }
       render();
       updatePeriodButtonText();
     });
@@ -2616,6 +2718,17 @@ function updateLangUI(){
     periodYearClear.addEventListener('click', () => {
       if (periodYearStart) periodYearStart.value = '';
       if (periodYearEnd) periodYearEnd.value = '';
+      render();
+      updatePeriodButtonText();
+    });
+  }
+
+  const periodMonthClear = document.getElementById('periodMonthClear');
+  if (periodMonthClear) {
+    periodMonthClear.addEventListener('click', () => {
+      if (monthCheckList) {
+        monthCheckList.querySelectorAll('input').forEach(i => { i.checked = false; });
+      }
       render();
       updatePeriodButtonText();
     });

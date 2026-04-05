@@ -1080,8 +1080,9 @@ td.num, th.num {
   align-items: stretch;
 }
 @media (min-width: 769px) {
+  /* 靠上對齊：若與長條圖並列，折線卡片不會在「整列高度」裡垂直置中，外側上下不留大塊空 */
   .complaints-charts {
-    align-items: center;
+    align-items: flex-start;
   }
 }
 .complaints-charts .compl-chart-card {
@@ -1094,11 +1095,12 @@ td.num, th.num {
   box-shadow: 0 14px 36px rgba(15,23,42,0.85);
   box-sizing: border-box;
 }
+/* 與上方 .chart-right h2「營收/指標趨勢」同級視覺：桌機 16px、手機見下方 media */
 .complaints-charts .compl-chart-card h3 {
-  font-size: 13px;
-  margin: 0 0 8px;
+  font-size: 16px;
+  margin: 6px 0;
   text-align: center;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #9ca3af;
 }
@@ -1142,7 +1144,6 @@ td.num, th.num {
   }
   .complaints-charts .compl-chart-card.complaint-bar-card h3 {
     margin-bottom: 2px;
-    font-size: 11px;
   }
 }
 .complaints-charts .compl-chart-card.complaint-bar-card canvas {
@@ -1168,17 +1169,14 @@ td.num, th.num {
   justify-content: flex-start;
 }
 @media (min-width: 769px) {
-  .complaint-trend-host {
-    min-height: 180px;
-  }
+  /* 高度交給 Chart 依 aspectRatio 計算，勿強制 min-height，否則圖例下方易多出一段空白 */
   .complaints-charts .compl-chart-card.complaint-line-card .complaint-trend-host canvas {
     max-height: 260px;
   }
 }
 @media (max-width: 768px) {
-  /* GPT 說的點合理：flex 子項 min-height:0 易被壓成「無高度」；折線已用 maintainAspectRatio，仍保留下限較穩 */
   .complaint-trend-host {
-    min-height: 200px;
+    min-height: 0;
   }
 }
 #complaintsTableWrap {
@@ -1193,7 +1191,9 @@ td.num, th.num {
   .complaints-charts {
     flex-direction: column;
   }
+  /* 勿讓子卡片 flex-grow 吃滿區塊高度，否則折線圖卡片會被拉高、圖例底下出現一大塊空 */
   .complaints-charts .compl-chart-card {
+    flex: 0 0 auto;
     flex-shrink: 0;
   }
   .complaints-charts .compl-chart-card.complaint-line-card {
@@ -1205,9 +1205,12 @@ td.num, th.num {
   .complaints-charts .compl-chart-card.complaint-bar-card {
     padding: 8px 10px;
   }
-  .complaints-charts .compl-chart-card.complaint-bar-card h3 {
-    margin-bottom: 4px;
-    font-size: 11px;
+  /* 比照 .chart-left h2 / .chart-right h2 手機 13px */
+  .complaints-charts .compl-chart-card h3 {
+    font-size: 13px !important;
+    margin: 4px 0 6px !important;
+    letter-spacing: 0.06em;
+    text-align: center !important;
   }
 }
 
@@ -3179,6 +3182,11 @@ function updateLangUI(){
           ? function (t) { return "Jumlah: " + t; }
           : function (t) { return "Total: " + t; };
 
+      var barCanvasDpr =
+        typeof window.devicePixelRatio === "number" && window.devicePixelRatio > 0
+          ? Math.min(window.devicePixelRatio, 2.5)
+          : 1;
+
       var complaintBarSegmentLabelsPlugin = {
         id: "complaintBarSegmentLabels",
         afterDatasetsDraw: function (chart) {
@@ -3205,15 +3213,15 @@ function updateLangUI(){
                 if (!(v > 0) || isNaN(v)) continue;
                 var props = bar.getProps(["x", "y", "base", "horizontal"], true);
                 if (props.horizontal !== true) continue;
-                var cx = (props.x + props.base) / 2;
-                var cy = props.y;
+                var cx = Math.round((props.x + props.base) / 2);
+                var cy = Math.round(props.y);
                 var segW = Math.abs(props.x - props.base);
                 if (segW < 8) continue;
                 if (segW < 14 && v < 2) continue;
                 var txt = String(Math.round(v));
                 ctx.fillStyle = "#0f172a";
                 ctx.strokeStyle = "rgba(255,255,255,0.35)";
-                ctx.lineWidth = 2;
+                ctx.lineWidth = fontPx <= 8 ? 1.5 : 2;
                 ctx.strokeText(txt, cx, cy);
                 ctx.fillText(txt, cx, cy);
               }
@@ -3246,7 +3254,8 @@ function updateLangUI(){
             indexAxis: "y",
             responsive: true,
             maintainAspectRatio: false,
-            devicePixelRatio: barDesktop ? (typeof window.devicePixelRatio === "number" ? window.devicePixelRatio : 1) : 1,
+            /* 手機勿固定 1：Retina 會把 1× canvas 放大顯示，軸／圖例／自繪數字都變糊 */
+            devicePixelRatio: barCanvasDpr,
             layout: {
               padding: { bottom: 2, top: 0, left: 0, right: barDesktop ? 8 : 10 }
             },
@@ -3506,7 +3515,12 @@ function updateLangUI(){
             /* 與營收 trendChart 相同：一律維持比例，避免手機 WebKit 與固定高度打架 */
             responsive: true,
             maintainAspectRatio: true,
-            aspectRatio: complaintTrendMobile ? Math.max(trendAspect, 1.15) : trendAspect,
+            aspectRatio: complaintTrendMobile
+              ? Math.max(trendAspect * 1.45, trendLegendOn ? 1.72 : 1.95)
+              : trendAspect,
+            layout: {
+              padding: { top: 0, right: 0, bottom: 0, left: 0 }
+            },
             plugins: {
               legend: {
                 display: trendLegendOn,

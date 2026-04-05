@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HOTEL_PDv47</title>
+  <title>HOTEL_PDv45</title>
 
   <!-- Chart.js 3.9；長條數字改自寫 plugin，不再用 chartjs-plugin-datalabels（file://／resize 易觸發 _listened／_labels 錯誤） -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
@@ -1168,6 +1168,9 @@ td.num, th.num {
   text-transform: uppercase;
   color: #9ca3af;
 }
+.complaint-line-titles .chart-subtitle {
+  margin-bottom: 6px;
+}
 /*
  * 客訴 canvas 不要用 width:100% !important：會蓋掉 Chart.js 的 inline 尺寸。
  * 橫向長條圖 maintainAspectRatio:false 在 iOS 上常因此算出高度 0 → 整張不見。
@@ -1477,7 +1480,10 @@ td.num, th.num {
           </div>
         </div>
         <div class="compl-chart-card complaint-line-card">
-          <h3 id="titleComplaintBySubject"></h3>
+          <div class="complaint-line-titles">
+            <h3 id="titleComplaintBySubject"></h3>
+            <div id="subTitleComplaintTrend" class="chart-subtitle"></div>
+          </div>
           <div class="complaint-trend-host" id="complaintTrendHost">
             <canvas id="complaintLineTrend" height="220"></canvas>
           </div>
@@ -1671,8 +1677,8 @@ td.num, th.num {
         subject: "主題",
         allSubjects: "全部主題",
         hideNo: "隱藏「無客訴」列",
-        byRoom: "實際客訴：同房型的件數（堆疊主題）",
-        byMonthTrend: "實際客訴：每月件數趨勢",
+        byRoom: "客訴：同房型的件數（堆疊主題）",
+        byMonthTrend: "客訴：每月件數趨勢",
         trendTotal: "總數",
         colDate: "日期",
         colRoom: "房號",
@@ -1963,6 +1969,7 @@ function updateLangUI(){
       const ts = document.getElementById("titleComplaintBySubject");
       if (ts) ts.textContent = C.byMonthTrend || "";
     }
+    updateComplaintTrendPeriodSubtitle();
 
     // 保留原本選項
     const oldCur = currencySel.value;
@@ -2925,9 +2932,21 @@ function updateLangUI(){
     });
   }
 
+  /** 客訴折線圖副標：與營收折線圖相同，顯示「期間：」+ 期間按鈕文案 */
+  function updateComplaintTrendPeriodSubtitle() {
+    const sub = document.getElementById("subTitleComplaintTrend");
+    const periodBtn = document.getElementById("periodBtn");
+    if (!sub) return;
+    const ptxt = periodBtn ? String(periodBtn.textContent || "").trim() : "";
+    const prefix =
+      currentLang === "en" ? "Period: " : currentLang === "id" ? "Periode: " : "期間：";
+    sub.textContent = ptxt ? prefix + ptxt : "";
+  }
+
   function renderComplaints() {
     const L = LANGS[currentLang];
     const C = L.complaints || {};
+    updateComplaintTrendPeriodSubtitle();
     const emptyEl = document.getElementById("complaintsEmpty");
     const metaEl = document.getElementById("complaintsMeta");
     const warnEl = document.getElementById("complaintsWarn");
@@ -3778,6 +3797,7 @@ function updateLangUI(){
                      : '期間：';
         sub.textContent = ptxt ? (prefix + ptxt) : '';
       }
+      updateComplaintTrendPeriodSubtitle();
     })();
 
     // 更新年/月切換按鈕的文字

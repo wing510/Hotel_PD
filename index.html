@@ -1133,6 +1133,13 @@ td.num, th.num {
 .complaints-charts .compl-chart-card.complaint-bar-card canvas {
   max-height: none;
 }
+/* Android：橫向長條常需明確寬度，否則 clientWidth 為 0 → Chart 不畫；勿對折線圖用 height:!important */
+@media (max-width: 768px) {
+  .complaint-bar-host canvas {
+    width: 100% !important;
+    max-width: 100%;
+  }
+}
 /* 折線圖：外層給穩定寬高，避免 iOS flex + 置中導致 canvas 有效高度為 0 */
 .complaint-trend-host {
   width: 100%;
@@ -2430,6 +2437,12 @@ function updateLangUI(){
     // 先判斷是否為手機寬度（更準）
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
+    /* 手機不註冊 datalabels 外掛：與客訴橫向 bar 併用時 Android 常整張不繪製 */
+    if (!isMobile && typeof ChartDataLabels !== "undefined" && !window._complaintDataLabelsRegistered) {
+      Chart.register(ChartDataLabels);
+      window._complaintDataLabelsRegistered = true;
+    }
+
     // 桌機/手機不同刻度數（桌機=10、手機=8）
     const TICK_LIMIT = isMobile ? 8 : 10;
     const axisTickPx = isMobile ? 9 : 12;
@@ -2673,9 +2686,16 @@ function updateLangUI(){
     Chart.register({
       id: "complaintYRoomCenter",
       afterLayout: function (chart) {
+        /* Android WebView：此段與橫向 bar 同時易導致整張不繪製；手機略過 */
+        if (typeof window.matchMedia === "function" && window.matchMedia("(max-width: 768px)").matches) {
+          return;
+        }
         alignComplaintYLabelsToBarCenter(chart);
       },
       beforeDatasetsDraw: function (chart) {
+        if (typeof window.matchMedia === "function" && window.matchMedia("(max-width: 768px)").matches) {
+          return;
+        }
         alignComplaintYLabelsToBarCenter(chart);
       }
     });
@@ -3007,11 +3027,6 @@ function updateLangUI(){
     }
     const barCanvas = document.getElementById("complaintBarRooms");
 
-    if (typeof ChartDataLabels !== "undefined" && !window._complaintDataLabelsRegistered) {
-      Chart.register(ChartDataLabels);
-      window._complaintDataLabelsRegistered = true;
-    }
-
     if (barCanvas && roomPairs.length) {
       const noRoomLbl = C.barNoRoomLabel || "—";
       const chartRoomKeys = roomPairs.map(function (p) { return p[0]; });
@@ -3031,22 +3046,49 @@ function updateLangUI(){
         window.matchMedia("(min-width: 769px)").matches;
       var barLegendPx = barDesktop ? 96 : 118;
       var barChrome = barDesktop ? 18 : 22;
-      var barRowIdeal = barDesktop ? 16 : 26;
-      var barMaxBody = barDesktop
-        ? Math.max(168, Math.floor(window.innerHeight * 0.19))
-        : Math.max(228, Math.floor(window.innerHeight * 0.38));
-      var barWantH = Math.max(barDesktop ? 142 : 198, nRooms * barRowIdeal + barLegendPx + barChrome);
-      var barHostH = Math.min(barMaxBody, barWantH);
-      var barRowPx = (barHostH - barLegendPx - barChrome) / Math.max(1, nRooms);
-      barRowPx = Math.max(barDesktop ? 11 : 12, Math.min(48, barRowPx));
-      barHostH = Math.round(nRooms * barRowPx + barLegendPx + barChrome);
-      var barYTick = barRowPx < 20 ? 9 : barRowPx < 26 ? 10 : 11;
+      var barMinRow = barDesktop ? 11 : 12;
+      var barMaxRow = 48;
+      /*
+       * 先前邏輯：先壓低 barHostH，再強制每列至少 12px 回算高度 →「全部房號」時高度可達數千 px。
+       * Android canvas 過高常無法繪製（整片白）。手機改為先訂上限，房間多時允許列高 < 12。
+       */
+      var barHostCap = barDesktop
+        ? 12000
+        : Math.min(
+            2000,
+            Math.max(380, Math.floor((typeof window.innerHeight === "number" ? window.innerHeight : 640) * 2.5))
+          );
+      var innerBudget = barHostCap - barLegendPx - barChrome;
+      if (innerBudget < 60) innerBudget = 60;
+      var barRowPx = Math.floor(innerBudget / Math.max(1, nRooms));
+      barRowPx = Math.min(barMaxRow, barRowPx);
+      if (barRowPx < barMinRow) {
+        if (!barDesktop && nRooms * barMinRow > innerBudget) {
+          barRowPx = Math.max(3, Math.floor(innerBudget / Math.max(1, nRooms)));
+        } else {
+          barRowPx = barMinRow;
+        }
+      }
+      var barHostH = Math.round(nRooms * barRowPx + barLegendPx + barChrome);
+      if (!barDesktop && barHostH > barHostCap) {
+        barHostH = barHostCap;
+        barRowPx = Math.max(3, Math.floor((barHostH - barLegendPx - barChrome) / Math.max(1, nRooms)));
+      }
+      var barYTick = barRowPx < 14 ? 8 : barRowPx < 20 ? 9 : barRowPx < 26 ? 10 : 11;
       if (barHost) {
         barHost.style.height = barHostH + "px";
         /* 與 height 一致，避免直向 flex 版面把 host 壓到比圖表矮、canvas 變 0 高 */
         barHost.style.minHeight = barHostH + "px";
+        if (!barDesktop) {
+          barHost.style.width = "100%";
+          void barHost.offsetWidth;
+        }
       }
-      var barThicknessPx = Math.max(8, Math.round(barRowPx));
+      var barThicknessPx = Math.max(2, Math.min(barMaxRow, Math.round(barRowPx)));
+      /* 手機用數字 borderRadius，避免部分 WebView 對物件寫法支援不佳 */
+      var barBorderRadius = barDesktop
+        ? { topLeft: 0, bottomLeft: 0, topRight: barEndRadius, bottomRight: barEndRadius }
+        : 6;
 
       const datasets = [];
       for (let si = 0; si < topSubjects.length; si++) {
@@ -3062,12 +3104,7 @@ function updateLangUI(){
           maxBarThickness: barThicknessPx,
           borderColor: barStackBorder,
           borderWidth: barStackBorderW,
-          borderRadius: {
-            topLeft: 0,
-            bottomLeft: 0,
-            topRight: barEndRadius,
-            bottomRight: barEndRadius
-          },
+          borderRadius: barBorderRadius,
           borderSkipped: false
         });
       }
@@ -3089,12 +3126,7 @@ function updateLangUI(){
           maxBarThickness: barThicknessPx,
           borderColor: barStackBorder,
           borderWidth: barStackBorderW,
-          borderRadius: {
-            topLeft: 0,
-            bottomLeft: 0,
-            topRight: barEndRadius,
-            bottomRight: barEndRadius
-          },
+          borderRadius: barBorderRadius,
           borderSkipped: false
         });
       }
@@ -3116,6 +3148,7 @@ function updateLangUI(){
           indexAxis: "y",
           responsive: true,
           maintainAspectRatio: false,
+          devicePixelRatio: barDesktop ? (typeof window.devicePixelRatio === "number" ? window.devicePixelRatio : 1) : 1,
           layout: {
             padding: { bottom: 2, top: 0, left: 0, right: barDesktop ? 8 : 10 }
           },
@@ -3159,7 +3192,8 @@ function updateLangUI(){
             tooltip: {
               callbacks: {
                 label: function (ctx) {
-                  const v = ctx.parsed.x ?? ctx.raw;
+                  var px = ctx.parsed && ctx.parsed.x;
+                  var v = px != null && !isNaN(px) ? px : ctx.raw;
                   return String(ctx.dataset.label) + ": " + v;
                 },
                 footer: function (items) {
@@ -3214,6 +3248,15 @@ function updateLangUI(){
           }
         }
       });
+      if (!barDesktop && complaintBarChart) {
+        [0, 80, 250].forEach(function (ms) {
+          setTimeout(function () {
+            try {
+              complaintBarChart.resize();
+            } catch (e2) {}
+          }, ms);
+        });
+      }
     } else if (barCanvas && complaintBarChart === null) {
       var barHostClear = document.getElementById("complaintBarHost");
       if (barHostClear) {

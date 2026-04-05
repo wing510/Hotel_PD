@@ -2779,41 +2779,54 @@ function updateLangUI(){
     return s.slice(0, maxLen - 1) + "…";
   }
 
-  /** 每一列房號：Y 軸文字與該列橫向長條共用同一垂直中心（適用任意列數） */
+  /** Y 軸房號與該列長條垂直對齊：Chart.js 3 繪製軸文字時用 item.translation[1]（非 item.y）；並須在 drawLabels 之前寫入 _labelItems。 */
   function alignComplaintYLabelsToBarCenter(chart) {
     try {
       if (!chart || !chart.canvas || chart.canvas.id !== "complaintBarRooms") return;
-      var opt = chart.options;
-      if (!opt || opt.indexAxis !== "y") return;
+      if (!chart.options || chart.options.indexAxis !== "y") return;
       var sc = chart.scales.y;
-      if (!sc || !sc.ticks || !sc.ticks.length) return;
-      var items = sc.labelItems;
+      if (!sc) return;
+      var area = chart.chartArea;
+      if (!area || area.bottom <= area.top) return;
+      var compute =
+        typeof sc._computeLabelItems === "function" ? sc._computeLabelItems.bind(sc) : null;
+      if (!compute) return;
+      /* 每幀重算，避免 chartArea／圖例高度變了仍沿用舊 _labelItems */
+      var items = (sc._labelItems = compute(area));
       if (!items || !items.length) return;
-      var tickCount = sc.ticks.length;
-      var n = Math.min(items.length, tickCount);
+      var n = items.length;
       for (var i = 0; i < n; i++) {
-        items[i].textBaseline = "middle";
-        items[i].y = sc.getPixelForTick(i);
+        var sumY = 0;
+        var cnt = 0;
+        for (var di = 0; di < chart.data.datasets.length; di++) {
+          var m = chart.getDatasetMeta(di);
+          if (!m || m.hidden || !m.data || i >= m.data.length) continue;
+          var bar = m.data[i];
+          if (!bar || bar.skip) continue;
+          sumY += bar.y;
+          cnt++;
+        }
+        var cy = cnt ? sumY / cnt : null;
+        if (cy == null) {
+          try {
+            cy = sc.getPixelForTick(i);
+          } catch (e2) {}
+        }
+        if (cy == null) continue;
+        var it = items[i];
+        if (!it) continue;
+        it.textBaseline = "middle";
+        if (it.translation && typeof it.translation[1] === "number") {
+          it.translation[1] = cy;
+        }
       }
-    } catch (e) {
-      /* 部分行動版 Chart 版本／時序下 labelItems 可能尚未就緒，避免整張客訴圖表無法繪製 */
-    }
+    } catch (e) {}
   }
 
   if (typeof Chart !== "undefined" && !window._complaintYRoomCenterReg) {
     Chart.register({
       id: "complaintYRoomCenter",
-      afterLayout: function (chart) {
-        /* Android WebView：此段與橫向 bar 同時易導致整張不繪製；手機略過 */
-        if (typeof window.matchMedia === "function" && window.matchMedia("(max-width: 768px)").matches) {
-          return;
-        }
-        alignComplaintYLabelsToBarCenter(chart);
-      },
-      beforeDatasetsDraw: function (chart) {
-        if (typeof window.matchMedia === "function" && window.matchMedia("(max-width: 768px)").matches) {
-          return;
-        }
+      beforeDraw: function (chart) {
         alignComplaintYLabelsToBarCenter(chart);
       }
     });
@@ -3196,9 +3209,10 @@ function updateLangUI(){
         if (innerBudget < 60) innerBudget = 60;
         barRowPx = Math.floor(innerBudget / Math.max(1, nRooms));
         barRowPx = Math.min(barMaxRow, barRowPx);
+        var barFloorD = 10;
         if (barRowPx < barMinRowD) {
           if (nRooms * barMinRowD > innerBudget) {
-            barRowPx = Math.max(3, Math.floor(innerBudget / Math.max(1, nRooms)));
+            barRowPx = Math.max(barFloorD, Math.floor(innerBudget / Math.max(1, nRooms)));
           } else {
             barRowPx = barMinRowD;
           }
@@ -3206,7 +3220,7 @@ function updateLangUI(){
         barHostH = Math.round(nRooms * barRowPx + barLegendPx + barChrome);
         if (barHostH > barHostCap) {
           barHostH = barHostCap;
-          barRowPx = Math.max(3, Math.floor((barHostH - barLegendPx - barChrome) / Math.max(1, nRooms)));
+          barRowPx = Math.max(barFloorD, Math.floor((barHostH - barLegendPx - barChrome) / Math.max(1, nRooms)));
         }
       } else {
         /* 手機：房號少時每列加高（房號／數字標籤較不擠）；房號多時維持可捲動 */
@@ -3218,10 +3232,10 @@ function updateLangUI(){
         barRowPx = Math.floor(innerTarget / Math.max(1, nRooms));
         barRowPx = Math.min(barMaxRow, Math.max(readableMinRow, barRowPx));
         barHostH = Math.round(nRooms * barRowPx + barLegendPx + barChrome);
-        var barMobileCanvasCap = 3200;
+        var barMobileCanvasCap = 4000;
         if (barHostH > barMobileCanvasCap) {
           barHostH = barMobileCanvasCap;
-          barRowPx = Math.max(8, Math.floor((barHostH - barLegendPx - barChrome) / Math.max(1, nRooms)));
+          barRowPx = Math.max(12, Math.floor((barHostH - barLegendPx - barChrome) / Math.max(1, nRooms)));
         }
       }
       var barYTick = barRowPx < 14 ? 8 : barRowPx < 20 ? 9 : barRowPx < 26 ? 10 : 11;

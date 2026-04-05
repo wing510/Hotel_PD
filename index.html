@@ -1103,14 +1103,11 @@ td.num, th.num {
   text-transform: uppercase;
   color: #9ca3af;
 }
+/* 與 .chart-right canvas 一致：不強制 height，交給 Chart.js 依容器計算，避免 iOS 上 canvas 變 0×0 */
 .complaints-charts canvas {
-  width: 100% !important;
   display: block;
-}
-/* 手機 WebKit：長條圖 maintainAspectRatio:false 時，canvas 需填滿由 JS 設定的 host 高度，否則可能高度為 0 看不到圖 */
-.complaint-bar-host canvas {
-  height: 100% !important;
-  max-height: none;
+  max-width: 100%;
+  width: 100% !important;
 }
 /* 橫向堆疊長條：高度由 JS 依房數設定（避免房多時被壓成細線） */
 .complaint-bar-host {
@@ -1151,16 +1148,11 @@ td.num, th.num {
   }
   .complaints-charts .compl-chart-card.complaint-line-card .complaint-trend-host canvas {
     max-height: 260px;
-    height: auto !important;
   }
 }
 @media (max-width: 768px) {
   .complaint-trend-host {
-    min-height: 220px;
-  }
-  .complaints-charts .compl-chart-card.complaint-line-card .complaint-trend-host canvas {
-    max-height: none !important;
-    height: 100% !important;
+    min-height: 0;
   }
 }
 #complaintsTableWrap {
@@ -2433,6 +2425,9 @@ function updateLangUI(){
 
     // 桌機/手機不同刻度數（桌機=10、手機=8）
     const TICK_LIMIT = isMobile ? 8 : 10;
+    const axisTickPx = isMobile ? 9 : 12;
+    const axisTickXPx = isMobile ? 9 : 11;
+    const legendFontPx = isMobile ? 9 : 12;
 
     trendChart = new Chart(document.getElementById("trendChart"), {
       type: "line",
@@ -2450,7 +2445,7 @@ function updateLangUI(){
             labels:{
               boxWidth: 10,
               boxHeight: 10,
-              font:{ size: 12 }
+              font:{ size: legendFontPx }
             }
           },
           tooltip:{
@@ -2497,7 +2492,7 @@ function updateLangUI(){
                 return value;
               },
               maxTicksLimit: TICK_LIMIT,
-              font: { size: 12 },
+              font: { size: axisTickPx },
               padding: 0
             },
             grid: {
@@ -2531,7 +2526,7 @@ function updateLangUI(){
                 return value;
               },
               maxTicksLimit: TICK_LIMIT,
-              font: { size: 12 },
+              font: { size: axisTickPx },
               padding: 0
             }
           },
@@ -2554,14 +2549,15 @@ function updateLangUI(){
               autoSkip: false,
               callback: v => v,
               maxRotation: 0,
-              minRotation: 0
+              minRotation: 0,
+              font: { size: axisTickPx }
             },
             grace: 6
           },
           x: {
             ticks: {
               color: "#e5e7eb",
-              font: { size: 11 }
+              font: { size: axisTickXPx }
             },
             grid: {
               color: "rgba(148, 163, 184, 0.25)"
@@ -3166,10 +3162,12 @@ function updateLangUI(){
               }
             },
             datalabels: {
-              display: function (ctx) {
-                const v = ctx.dataset.data[ctx.dataIndex];
-                return v != null && Number(v) > 0;
-              },
+              display: barDesktop
+                ? function (ctx) {
+                    const v = ctx.dataset.data[ctx.dataIndex];
+                    return v != null && Number(v) > 0;
+                  }
+                : false,
               color: "#0f172a",
               font: { size: barRowPx < 22 ? 10 : 12, weight: "800" },
               formatter: function (v) {
@@ -3184,14 +3182,19 @@ function updateLangUI(){
             x: {
               stacked: true,
               beginAtZero: true,
-              ticks: { color: tickColor, precision: 0, stepSize: 1 },
+              ticks: {
+                color: tickColor,
+                precision: 0,
+                stepSize: 1,
+                font: { size: barDesktop ? 11 : 9 }
+              },
               grid: { color: "rgba(148,163,184,0.2)", lineWidth: 1 }
             },
             y: {
               stacked: false,
               ticks: {
                 color: "#f1f5f9",
-                font: { size: barYTick, weight: "600" },
+                font: { size: barDesktop ? barYTick : Math.min(barYTick, 10), weight: "600" },
                 autoSkip: false,
                 padding: 4
               },
@@ -3303,19 +3306,13 @@ function updateLangUI(){
         }
         const trendLegendOn = trendDatasets.length > 1;
         var trendAspect = trendLegendOn ? 1.05 : 1.35;
-        var trendMobile =
+        var trendHost = document.getElementById("complaintTrendHost");
+        if (trendHost) trendHost.style.height = "";
+        var complaintTrendMobile =
           typeof window.matchMedia === "function" &&
           window.matchMedia("(max-width: 768px)").matches;
-        var trendHost = document.getElementById("complaintTrendHost");
-        if (trendMobile && trendHost) {
-          var tw = trendHost.getBoundingClientRect().width || trendHost.clientWidth;
-          if (!tw || tw < 40) {
-            tw = Math.min(typeof window.innerWidth === "number" ? window.innerWidth - 48 : 320, 360);
-          }
-          trendHost.style.height = Math.round(Math.max(200, tw / trendAspect)) + "px";
-        } else if (trendHost) {
-          trendHost.style.height = "";
-        }
+        var ctAxis = complaintTrendMobile ? 9 : 11;
+        var ctLegend = complaintTrendMobile ? 9 : 10;
         complaintTrendChart = new Chart(trendCanvas, {
           type: "line",
           data: {
@@ -3323,9 +3320,10 @@ function updateLangUI(){
             datasets: trendDatasets
           },
           options: {
+            /* 與營收 trendChart 相同：一律維持比例，避免手機 WebKit 與固定高度打架 */
             responsive: true,
-            maintainAspectRatio: !trendMobile,
-            aspectRatio: trendAspect,
+            maintainAspectRatio: true,
+            aspectRatio: complaintTrendMobile ? Math.max(trendAspect, 1.15) : trendAspect,
             plugins: {
               legend: {
                 display: trendLegendOn,
@@ -3334,8 +3332,8 @@ function updateLangUI(){
                 labels: {
                   boxWidth: 10,
                   boxHeight: 10,
-                  padding: 6,
-                  font: { size: 10, weight: "500", family: "system-ui,Segoe UI,sans-serif" },
+                  padding: complaintTrendMobile ? 4 : 6,
+                  font: { size: ctLegend, weight: "500", family: "system-ui,Segoe UI,sans-serif" },
                   color: "#e5e7eb",
                   usePointStyle: true,
                   pointStyle: "line"
@@ -3359,12 +3357,18 @@ function updateLangUI(){
                 beginAtZero: true,
                 ticks: {
                   color: tickColor,
-                  precision: 0
+                  precision: 0,
+                  font: { size: ctAxis }
                 },
                 grid: { color: gridColor }
               },
               x: {
-                ticks: { color: "#e5e7eb", font: { size: 11 }, maxRotation: 45, minRotation: 0 },
+                ticks: {
+                  color: "#e5e7eb",
+                  font: { size: ctAxis },
+                  maxRotation: complaintTrendMobile ? 60 : 45,
+                  minRotation: 0
+                },
                 grid: { color: "rgba(148,163,184,0.15)" }
               }
             }
@@ -3385,21 +3389,6 @@ function updateLangUI(){
           if (complaintBarChart) complaintBarChart.resize();
         } catch (e) {}
         try {
-          if (
-            complaintTrendChart &&
-            typeof window.matchMedia === "function" &&
-            window.matchMedia("(max-width: 768px)").matches
-          ) {
-            var thR = document.getElementById("complaintTrendHost");
-            var opt = complaintTrendChart.options;
-            var ar = opt && typeof opt.aspectRatio === "number" ? opt.aspectRatio : 1.15;
-            if (thR && ar > 0) {
-              var twR = thR.getBoundingClientRect().width || thR.clientWidth;
-              if (twR >= 40) {
-                thR.style.height = Math.round(Math.max(200, twR / ar)) + "px";
-              }
-            }
-          }
           if (complaintTrendChart) complaintTrendChart.resize();
         } catch (e) {}
       }

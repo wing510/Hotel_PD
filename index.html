@@ -3,10 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HOTEL_PDv44</title>
+  <title>HOTEL_PDv45</title>
 
   <!-- 引入 Chart.js (繪製圖表用) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 
   <style>
     /* 全域字型與頁面設定 */
@@ -972,6 +973,170 @@ td.num, th.num {
   gap: 8px;
 }
 
+/* 客訴／維修區 */
+.complaints-section {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(148,163,184,0.35);
+}
+.complaints-section h2 {
+  font-size: 17px;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin: 0 0 6px;
+  letter-spacing: 0.04em;
+}
+.complaints-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+  margin-bottom: 14px;
+}
+.complaints-toolbar .field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+}
+.complaints-toolbar label.f {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+}
+.complaints-toolbar select {
+  min-width: 140px;
+}
+.complaints-toolbar-table {
+  margin-top: 2px;
+  margin-bottom: 12px;
+}
+.complaints-table-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  margin-bottom: 10px;
+}
+.complaints-table-tools .chk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #e5e7eb;
+  cursor: pointer;
+  user-select: none;
+}
+.complaints-table-tools .chk input {
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+.complaints-warn {
+  font-size: 12px;
+  color: #fcd34d;
+  background: rgba(251,191,36,0.08);
+  border: 1px solid rgba(251,191,36,0.35);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+.complaints-meta {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 12px;
+}
+.complaints-charts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: stretch;
+}
+@media (min-width: 769px) {
+  .complaints-charts {
+    align-items: center;
+  }
+}
+.complaints-charts .compl-chart-card {
+  flex: 1 1 280px;
+  min-width: 0;
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: radial-gradient(circle at top, #020617 0, #020617 55%, #020617 100%);
+  border: 1px solid rgba(148,163,184,0.45);
+  box-shadow: 0 14px 36px rgba(15,23,42,0.85);
+  box-sizing: border-box;
+}
+.complaints-charts .compl-chart-card h3 {
+  font-size: 13px;
+  margin: 0 0 8px;
+  text-align: center;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+.complaints-charts canvas {
+  width: 100% !important;
+}
+/* 橫向堆疊長條：高度由 JS 依房數設定（避免房多時被壓成細線） */
+.complaint-bar-host {
+  width: 100%;
+  position: relative;
+  min-height: 200px;
+}
+@media (min-width: 769px) {
+  .complaint-bar-host {
+    min-height: 110px;
+  }
+  .complaints-charts .compl-chart-card.complaint-bar-card {
+    padding: 6px 8px;
+  }
+  .complaints-charts .compl-chart-card.complaint-bar-card h3 {
+    margin-bottom: 2px;
+    font-size: 11px;
+  }
+}
+.complaints-charts .compl-chart-card.complaint-bar-card canvas {
+  max-height: none;
+}
+.complaints-charts .compl-chart-card.complaint-line-card canvas {
+  max-height: 260px;
+}
+/* 折線圖卡片：標題＋canvas 在卡片內垂直置中 */
+.complaints-charts .compl-chart-card.complaint-line-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+#complaintsTableWrap {
+  overflow-x: auto;
+  border-radius: 16px;
+  border: 1px solid rgba(148,163,184,0.4);
+}
+#complaintsTable {
+  margin-top: 0;
+}
+@media (max-width: 768px) {
+  .complaints-charts {
+    flex-direction: column;
+  }
+  .complaints-charts .compl-chart-card.complaint-line-card {
+    order: -1;
+  }
+  .complaint-bar-host {
+    min-height: 165px;
+  }
+  .complaints-charts .compl-chart-card.complaint-bar-card {
+    padding: 8px 10px;
+  }
+  .complaints-charts .compl-chart-card.complaint-bar-card h3 {
+    margin-bottom: 4px;
+    font-size: 11px;
+  }
+}
+
 
 </style>
 </head>
@@ -1132,6 +1297,58 @@ td.num, th.num {
       <tfoot id="tfoot"></tfoot>
     </table>
 
+    <!-- 客訴／維修（COMPLAINTS_RAW） -->
+    <section class="complaints-section" id="complaintsSection" aria-labelledby="complaintsTitle">
+      <h2 id="complaintsTitle">客訴與維修紀錄</h2>
+      <div class="complaints-toolbar" id="complaintsToolbarTop">
+        <div class="field">
+          <label class="f" id="lblComplaintRoom" for="complaintRoomFilter">房號</label>
+          <select id="complaintRoomFilter"></select>
+        </div>
+        <div class="field">
+          <label class="f" id="lblComplaintSubject" for="complaintSubjectFilter">主題</label>
+          <select id="complaintSubjectFilter"></select>
+        </div>
+      </div>
+      <div class="complaints-warn" id="complaintsWarn" hidden></div>
+      <p class="complaints-meta" id="complaintsMeta"></p>
+      <div class="complaints-charts" id="complaintsChartsRow">
+        <div class="compl-chart-card complaint-bar-card" id="complaintBarCard">
+          <h3 id="titleComplaintByRoom"></h3>
+          <div class="complaint-bar-host" id="complaintBarHost">
+            <canvas id="complaintBarRooms" height="260"></canvas>
+          </div>
+        </div>
+        <div class="compl-chart-card complaint-line-card">
+          <h3 id="titleComplaintBySubject"></h3>
+          <canvas id="complaintLineTrend" height="220"></canvas>
+        </div>
+      </div>
+      <div class="complaints-table-tools" id="complaintsTableTools">
+        <label class="chk">
+          <input type="checkbox" id="complaintHideNoComplaint" checked />
+          <span id="lblComplaintHideNo"></span>
+        </label>
+      </div>
+      <div class="complaints-toolbar complaints-toolbar-table" id="complaintsToolbarTable">
+        <div class="field">
+          <label class="f" id="lblComplaintRoomTable" for="complaintRoomFilterTable">房號</label>
+          <select id="complaintRoomFilterTable"></select>
+        </div>
+        <div class="field">
+          <label class="f" id="lblComplaintSubjectTable" for="complaintSubjectFilterTable">主題</label>
+          <select id="complaintSubjectFilterTable"></select>
+        </div>
+      </div>
+      <div id="complaintsTableWrap">
+        <table id="complaintsTable">
+          <thead id="complaintsThead"></thead>
+          <tbody id="complaintsTbody"></tbody>
+        </table>
+      </div>
+      <p class="complaints-meta" id="complaintsEmpty" hidden></p>
+    </section>
+
     <!-- 備註區 -->
     <div class="note">
       <button onclick="updateRates()" 
@@ -1145,7 +1362,7 @@ td.num, th.num {
 
 <script>
   // ★★★ 這裡改：Google Sheet API URL ★★★
-  const DATA_URL = "https://script.google.com/macros/s/AKfycbyl9w8v0HY-k4ti_I5ehGUBiYHAlQP5vP_Y-OgtuqhR5oUBEg7lKXsgrx4Z_yHM09vw/exec"; 
+  const DATA_URL = "https://script.google.com/macros/s/AKfycbxGnlNnn-__A6wIPwXNG_0JY0L0oVTraR7E7l_Zr8kfko4c-kmAxjO4TOwnxoVLth-v/exec"; 
 
   // 匯率（以 IDR 為基礎），一開始給預設值，後面會自動更新
   const RATES = { 
@@ -1255,8 +1472,8 @@ td.num, th.num {
     zh: {
       title: "酒店業績儀表板",
       filters: { 
-        year: "年", 
-        month: "月", 
+        year: "年份", 
+        month: "月份", 
         period: "期間",
         periodRange: "起迄年月",
         periodStart: "起始",
@@ -1284,8 +1501,8 @@ td.num, th.num {
       table: { 
         weekday: "星期", 
         date: "日期", 
-        year: "年", 
-        month: "月", 
+        year: "年份", 
+        month: "月份", 
         total: "總收入", 
         sum: "合計", 
         roomSold: "已售", 
@@ -1294,8 +1511,35 @@ td.num, th.num {
         occ: "住房率%", 
         arr: "平均房價"
       },
+      complaints: {
+        room: "房號",
+        allRooms: "全部房號",
+        subject: "主題",
+        allSubjects: "全部主題",
+        hideNo: "隱藏「無客訴」列",
+        byRoom: "實際客訴：同房件數（堆疊主題）",
+        byMonthTrend: "實際客訴：每月件數趨勢",
+        trendTotal: "總數",
+        colDate: "日期",
+        colRoom: "房號",
+        colSubject: "主題",
+        colFo: "前廳",
+        colEng: "工程",
+        colHk: "客房",
+        colRepair: "維修處理",
+        colTime: "時間",
+        colResult: "結果",
+        colProgress: "進度",
+        meta: (n, real) => `本表 ${n} 列（實際客訴 ${real} 筆）`,
+        warn: (rooms, th) => `以下房號在本期間實際客訴 ≥ ${th} 次，建議複查是否為反覆故障（例如冷媒常補仍不冷）：${rooms}`,
+        empty: "尚無客訴資料。請確認試算表已有「Complaints」分頁，且 Apps Script 已部署為合併回傳 complaints。",
+        noSlice: "（無實際客訴可統計）",
+        sectionTitle: "客訴與維修紀錄",
+        barOtherSubjects: "其他主題",
+        barNoRoomLabel: "無房號"
+      },
       weekdays: ['週日','週一','週二','週三','週四','週五','週六'],
-      months: m => `${m}`,
+      months: m => `${m}月`,
       currencyOpts: [
         { val:"IDR", text:"IDR" },
         { val:"TWD", text:"TWD" },
@@ -1355,6 +1599,33 @@ td.num, th.num {
         rno: "RNO",
         occ: "Occ%", 
         arr: "Avg Rate"
+      },
+      complaints: {
+        room: "Room",
+        allRooms: "All rooms",
+        subject: "Subject",
+        allSubjects: "All subjects",
+        hideNo: "Hide \"no complaint\" rows",
+        byRoom: "Real complaints per room (stacked by subject)",
+        byMonthTrend: "Real complaints: monthly trend",
+        trendTotal: "Total",
+        colDate: "Date",
+        colRoom: "Room",
+        colSubject: "Subject",
+        colFo: "FO",
+        colEng: "ENG",
+        colHk: "HK",
+        colRepair: "Repair",
+        colTime: "Time",
+        colResult: "Result",
+        colProgress: "Progress",
+        meta: (n, real) => `${n} row(s), ${real} real complaint(s)`,
+        warn: (rooms, th) => `Rooms with ≥ ${th} real complaint(s) in this period — review for recurring faults: ${rooms}`,
+        empty: "No complaint data. Add a \"Complaints\" tab and deploy merged Apps Script.",
+        noSlice: "(No real complaints in period)",
+        sectionTitle: "Guest complaints & maintenance",
+        barOtherSubjects: "Other subjects",
+        barNoRoomLabel: "No room #"
       },
       weekdays: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
       months: m => ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m-1],
@@ -1418,6 +1689,33 @@ td.num, th.num {
         occ: "Hunian%", 
         arr: "Tarif Kamar"
       },
+      complaints: {
+        room: "Kamar",
+        allRooms: "Semua kamar",
+        subject: "Subjek",
+        allSubjects: "Semua subjek",
+        hideNo: "Sembunyikan baris tanpa komplain",
+        byRoom: "Komplain per kamar (bertumpuk subjek)",
+        byMonthTrend: "Komplain nyata: tren bulanan",
+        trendTotal: "Jumlah",
+        colDate: "Tanggal",
+        colRoom: "Kamar",
+        colSubject: "Subjek",
+        colFo: "FO",
+        colEng: "ENG",
+        colHk: "HK",
+        colRepair: "Perbaikan",
+        colTime: "Waktu",
+        colResult: "Hasil",
+        colProgress: "Progres",
+        meta: (n, real) => `${n} baris, ${real} komplain nyata`,
+        warn: (rooms, th) => `Kamar dengan ≥ ${th} komplain nyata di periode ini — periksa masalah berulang: ${rooms}`,
+        empty: "Belum ada data. Pastikan sheet \"Complaints\" dan Apps Script gabungan sudah deploy.",
+        noSlice: "(Tidak ada komplain nyata)",
+        sectionTitle: "Komplain & perawatan",
+        barOtherSubjects: "Subjek lain",
+        barNoRoomLabel: "Tanpa nomor kamar"
+      },
       weekdays: ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'],
       months: m => ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"][m-1],
       currencyOpts: [
@@ -1469,6 +1767,26 @@ function updateLangUI(){
     document.getElementById("titlePie").textContent = L.chartTitles.pie;
     document.getElementById("titleLine").textContent = L.chartTitles.line;
     document.getElementById("noteRate").textContent = getNoteText(currentLang);
+
+    const C = L.complaints;
+    if (C) {
+      const ct = document.getElementById("complaintsTitle");
+      if (ct) ct.textContent = C.sectionTitle || "";
+      const lr = document.getElementById("lblComplaintRoom");
+      if (lr) lr.textContent = C.room || "";
+      const lrT = document.getElementById("lblComplaintRoomTable");
+      if (lrT) lrT.textContent = C.room || "";
+      const lsub = document.getElementById("lblComplaintSubject");
+      if (lsub) lsub.textContent = C.subject || "";
+      const lsubT = document.getElementById("lblComplaintSubjectTable");
+      if (lsubT) lsubT.textContent = C.subject || "";
+      const lh = document.getElementById("lblComplaintHideNo");
+      if (lh) lh.textContent = C.hideNo || "";
+      const tr = document.getElementById("titleComplaintByRoom");
+      if (tr) tr.textContent = C.byRoom || "";
+      const ts = document.getElementById("titleComplaintBySubject");
+      if (ts) ts.textContent = C.byMonthTrend || "";
+    }
 
     // 保留原本選項
     const oldCur = currencySel.value;
@@ -1535,6 +1853,8 @@ function updateLangUI(){
 
   // ===== 全域變數 =====
   let RAW = [];
+  /** 客訴／維修（Apps Script 合併回傳 complaints 時填入；僅陣列時為 []） */
+  let COMPLAINTS_RAW = [];
 
   // 抓取主要 DOM 元素
   const periodBtn = document.getElementById('periodBtn');
@@ -2086,7 +2406,8 @@ function updateLangUI(){
             display: true,
             text: "Y-axis多軸：L=Total/Room、R=Others...",
             align: "start"
-          }
+          },
+          datalabels: { display: false }
         },
         scales:{
           yLeft: { 
@@ -2228,7 +2549,8 @@ function updateLangUI(){
           legend:{ 
             position:"right", 
             labels:{ boxWidth:12, font:{size:12}, padding: 8 } 
-          } 
+          },
+          datalabels: { display: false }
         } 
       }
     });
@@ -2245,6 +2567,792 @@ function updateLangUI(){
       pieSub.textContent = `${prefix}${cur} ${formatCurrency(totalIncome, cur)}`;
     }
   } // ← 結束 renderCharts()
+
+  const COMPLAINT_REPEAT_THRESHOLD = 3;
+  const COMPLAINT_STACK_TOP_N = 5;
+  const COMPLAINT_STACK_COLORS = [
+    "#22d3ee", "#c084fc", "#fb7185", "#4ade80", "#facc15", "#94a3b8"
+  ];
+  let complaintBarChart, complaintTrendChart;
+
+  function complaintTruncLegend(s, maxLen) {
+    s = String(s);
+    if (s.length <= maxLen) return s;
+    return s.slice(0, maxLen - 1) + "…";
+  }
+
+  /** 每一列房號：Y 軸文字與該列橫向長條共用同一垂直中心（適用任意列數） */
+  function alignComplaintYLabelsToBarCenter(chart) {
+    if (!chart || !chart.canvas || chart.canvas.id !== "complaintBarRooms") return;
+    var opt = chart.options;
+    if (!opt || opt.indexAxis !== "y") return;
+    var sc = chart.scales.y;
+    if (!sc || !sc.ticks || !sc.ticks.length) return;
+    var items = sc.labelItems;
+    if (!items || !items.length) return;
+    var tickCount = sc.ticks.length;
+    var n = Math.min(items.length, tickCount);
+    for (var i = 0; i < n; i++) {
+      items[i].textBaseline = "middle";
+      items[i].y = sc.getPixelForTick(i);
+    }
+  }
+
+  if (typeof Chart !== "undefined" && !window._complaintYRoomCenterReg) {
+    Chart.register({
+      id: "complaintYRoomCenter",
+      afterLayout: function (chart) {
+        alignComplaintYLabelsToBarCenter(chart);
+      },
+      beforeDatasetsDraw: function (chart) {
+        alignComplaintYLabelsToBarCenter(chart);
+      }
+    });
+    window._complaintYRoomCenterReg = true;
+  }
+
+  function cPick(row) {
+    const keys = Array.prototype.slice.call(arguments, 1);
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") {
+        return row[k];
+      }
+    }
+    return "";
+  }
+
+  function complaintRowTime(row) {
+    return String(
+      cPick(row, "TIME COMPLAINT", "TIME COMPLANT", "Time", "time") || ""
+    ).trim();
+  }
+
+  function complaintRowDateObj(row) {
+    const d = cPick(row, "Date", "date");
+    return parseYMD(String(d));
+  }
+
+  function complaintNoComplaintBundle(row) {
+    return [
+      cPick(row, "SUBJECT", "Subject", "subject"),
+      cPick(row, "CATEGORY", "Category", "category")
+    ]
+      .join(" ")
+      .toUpperCase()
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function isNoComplaintRow(row) {
+    let s = complaintNoComplaintBundle(row);
+    if (!s) return false;
+    s = s.replace(/COMPALINT/g, "COMPLAINT");
+    if (s.includes("NO COMPLAINT") || s.includes("NO COMPLANT")) return true;
+    if (s.includes("BELUM ADA COMPLAINT")) return true;
+    if (/\bBELUM\s+ADA\b/.test(s) && s.includes("COMPLAINT")) return true;
+    return false;
+  }
+
+  function normalizeComplaintRoomToken(s) {
+    s = String(s).trim();
+    if (!s) return "";
+    if (/^\d{1,2}$/.test(s)) return s.padStart(3, "0");
+    return s;
+  }
+
+  function complaintRoomStr(row) {
+    const raw = String(cPick(row, "ROOM", "Room", "room") || "").trim();
+    if (!raw) return "";
+    if (raw.indexOf(",") !== -1) {
+      return raw.split(",").map(function (part) {
+        return normalizeComplaintRoomToken(part.trim());
+      }).join(", ");
+    }
+    return normalizeComplaintRoomToken(raw);
+  }
+
+  function complaintSubjectStr(row) {
+    const s = String(cPick(row, "SUBJECT", "Subject", "subject") || "").trim();
+    return s || "—";
+  }
+
+  function uniqueSubjectsInComplaintPeriod() {
+    const set = new Set();
+    for (let i = 0; i < COMPLAINTS_RAW.length; i++) {
+      const row = COMPLAINTS_RAW[i];
+      if (!complaintMatchesPeriod(row)) continue;
+      if (isNoComplaintRow(row)) continue;
+      set.add(complaintSubjectStr(row));
+    }
+    return Array.from(set).sort(function (a, b) {
+      if (a === "—" && b !== "—") return 1;
+      if (b === "—" && a !== "—") return -1;
+      return String(a).localeCompare(String(b), undefined, { numeric: true });
+    });
+  }
+
+  function complaintMatchesPeriod(row) {
+    const t = complaintRowDateObj(row);
+    if (!t) return false;
+    return rowMatchesPeriod(t);
+  }
+
+  function uniqueRoomsFromComplaints() {
+    const set = new Set();
+    for (let i = 0; i < COMPLAINTS_RAW.length; i++) {
+      const r = complaintRoomStr(COMPLAINTS_RAW[i]);
+      if (r) set.add(r);
+    }
+    return Array.from(set).sort(function (a, b) {
+      const na = Number(a);
+      const nb = Number(b);
+      if (!isNaN(na) && !isNaN(nb) && String(na) === String(a) && String(nb) === String(b)) {
+        return na - nb;
+      }
+      return String(a).localeCompare(String(b), undefined, { numeric: true });
+    });
+  }
+
+  function renderComplaints() {
+    const L = LANGS[currentLang];
+    const C = L.complaints || {};
+    const emptyEl = document.getElementById("complaintsEmpty");
+    const metaEl = document.getElementById("complaintsMeta");
+    const warnEl = document.getElementById("complaintsWarn");
+    const roomSel = document.getElementById("complaintRoomFilter");
+    const hideNo = document.getElementById("complaintHideNoComplaint");
+    const theadC = document.getElementById("complaintsThead");
+    const tbodyC = document.getElementById("complaintsTbody");
+    const wrap = document.getElementById("complaintsTableWrap");
+    const sec = document.getElementById("complaintsSection");
+
+    if (!roomSel || !theadC || !tbodyC) return;
+
+    const chartRow = document.getElementById("complaintsChartsRow");
+    const toolBar = document.getElementById("complaintsToolbarTop");
+    const toolBarTable = document.getElementById("complaintsToolbarTable");
+    const tableTools = document.getElementById("complaintsTableTools");
+
+    if (!COMPLAINTS_RAW.length) {
+      if (emptyEl) {
+        emptyEl.hidden = false;
+        emptyEl.textContent = C.empty || "";
+      }
+      if (wrap) wrap.style.display = "none";
+      if (chartRow) chartRow.style.display = "none";
+      if (toolBar) toolBar.style.display = "none";
+      if (toolBarTable) toolBarTable.style.display = "none";
+      if (tableTools) tableTools.style.display = "none";
+      if (metaEl) metaEl.textContent = "";
+      if (warnEl) {
+        warnEl.hidden = true;
+        warnEl.textContent = "";
+      }
+      if (complaintBarChart) {
+        complaintBarChart.destroy();
+        complaintBarChart = null;
+      }
+      if (complaintTrendChart) {
+        complaintTrendChart.destroy();
+        complaintTrendChart = null;
+      }
+      if (sec) sec.style.opacity = "0.85";
+      return;
+    }
+
+    if (emptyEl) emptyEl.hidden = true;
+    if (wrap) wrap.style.display = "";
+    if (chartRow) chartRow.style.display = "";
+    if (toolBar) toolBar.style.display = "";
+    if (toolBarTable) toolBarTable.style.display = "";
+    if (tableTools) tableTools.style.display = "";
+    if (sec) sec.style.opacity = "1";
+
+    const roomSelTable = document.getElementById("complaintRoomFilterTable");
+    const subjSel = document.getElementById("complaintSubjectFilter");
+    const subjSelTable = document.getElementById("complaintSubjectFilterTable");
+    const prevRoom =
+      (roomSel && roomSel.value) || (roomSelTable && roomSelTable.value) || "";
+    roomSel.innerHTML = "";
+    const opt0 = document.createElement("option");
+    opt0.value = "";
+    opt0.textContent = C.allRooms || "All";
+    roomSel.appendChild(opt0);
+    uniqueRoomsFromComplaints().forEach(function (rm) {
+      const o = document.createElement("option");
+      o.value = rm;
+      o.textContent = rm;
+      roomSel.appendChild(o);
+    });
+    if (prevRoom && Array.from(roomSel.options).some(function (o) { return o.value === prevRoom; })) {
+      roomSel.value = prevRoom;
+    }
+    if (roomSelTable) {
+      roomSelTable.innerHTML = roomSel.innerHTML;
+      roomSelTable.value = roomSel.value;
+    }
+
+    const prevSubj =
+      (subjSel && subjSel.value) || (subjSelTable && subjSelTable.value) || "";
+    if (subjSel) {
+      subjSel.innerHTML = "";
+      const os0 = document.createElement("option");
+      os0.value = "";
+      os0.textContent = C.allSubjects || "All subjects";
+      subjSel.appendChild(os0);
+      uniqueSubjectsInComplaintPeriod().forEach(function (sj) {
+        const o = document.createElement("option");
+        o.value = sj;
+        o.textContent = sj;
+        subjSel.appendChild(o);
+      });
+      if (prevSubj && Array.from(subjSel.options).some(function (o) { return o.value === prevSubj; })) {
+        subjSel.value = prevSubj;
+      }
+    }
+    if (subjSelTable && subjSel) {
+      subjSelTable.innerHTML = subjSel.innerHTML;
+      subjSelTable.value = subjSel.value;
+    }
+
+    const roomFilter = roomSel.value;
+    const subjectFilter = subjSel ? subjSel.value : "";
+    const hideNoRows = hideNo && hideNo.checked;
+    const displayRows = [];
+    for (let i = 0; i < COMPLAINTS_RAW.length; i++) {
+      const row = COMPLAINTS_RAW[i];
+      if (!complaintMatchesPeriod(row)) continue;
+      if (roomFilter && complaintRoomStr(row) !== roomFilter) continue;
+      if (subjectFilter && complaintSubjectStr(row) !== subjectFilter) continue;
+      if (hideNoRows && isNoComplaintRow(row)) continue;
+      displayRows.push(row);
+    }
+    displayRows.sort(function (a, b) {
+      const ta = complaintRowDateObj(a);
+      const tb = complaintRowDateObj(b);
+      if (ta && tb && ta.str !== tb.str) return ta.str < tb.str ? -1 : 1;
+      if (ta && !tb) return -1;
+      if (!ta && tb) return 1;
+      const ra = complaintRoomStr(a);
+      const rb = complaintRoomStr(b);
+      const na = Number(ra);
+      const nb = Number(rb);
+      if (!isNaN(na) && !isNaN(nb) && String(na) === ra && String(nb) === rb) {
+        if (na !== nb) return na - nb;
+      } else if (ra !== rb) {
+        return String(ra).localeCompare(String(rb), undefined, { numeric: true });
+      }
+      const n1 = Number(cPick(a, "No")) || 0;
+      const n2 = Number(cPick(b, "No")) || 0;
+      return n1 - n2;
+    });
+
+    let realInTable = 0;
+    for (let j = 0; j < displayRows.length; j++) {
+      if (!isNoComplaintRow(displayRows[j])) realInTable++;
+    }
+    if (metaEl && C.meta) {
+      metaEl.textContent = C.meta(displayRows.length, realInTable);
+    }
+
+    const realForCharts = [];
+    for (let ri = 0; ri < COMPLAINTS_RAW.length; ri++) {
+      const row = COMPLAINTS_RAW[ri];
+      if (!complaintMatchesPeriod(row)) continue;
+      if (isNoComplaintRow(row)) continue;
+      if (roomFilter && complaintRoomStr(row) !== roomFilter) continue;
+      if (subjectFilter && complaintSubjectStr(row) !== subjectFilter) continue;
+      realForCharts.push(row);
+    }
+    const roomCount = {};
+    const roomSubjectCount = {};
+    const monthCount = {};
+    const monthSubjectCount = {};
+    for (let k = 0; k < realForCharts.length; k++) {
+      const rw = realForCharts[k];
+      const rm = complaintRoomStr(rw) || "—";
+      roomCount[rm] = (roomCount[rm] || 0) + 1;
+      const subj = complaintSubjectStr(rw);
+      if (!roomSubjectCount[rm]) roomSubjectCount[rm] = {};
+      roomSubjectCount[rm][subj] = (roomSubjectCount[rm][subj] || 0) + 1;
+      const tmo = complaintRowDateObj(rw);
+      if (tmo) {
+        const mk = tmo.y * 100 + tmo.m;
+        monthCount[mk] = (monthCount[mk] || 0) + 1;
+        if (!monthSubjectCount[mk]) monthSubjectCount[mk] = {};
+        monthSubjectCount[mk][subj] = (monthSubjectCount[mk][subj] || 0) + 1;
+      }
+    }
+
+    const thN = COMPLAINT_REPEAT_THRESHOLD;
+    const hotRooms = Object.keys(roomCount)
+      .filter(function (k) { return k !== "—" && roomCount[k] >= thN; })
+      .sort(function (a, b) { return roomCount[b] - roomCount[a]; });
+    if (warnEl) {
+      if (hotRooms.length && C.warn) {
+        warnEl.hidden = false;
+        warnEl.textContent = C.warn(hotRooms.join(", "), thN);
+      } else {
+        warnEl.hidden = true;
+        warnEl.textContent = "";
+      }
+    }
+
+    const roomPairs = Object.keys(roomCount)
+      .map(function (k) { return [k, roomCount[k]]; })
+      .sort(function (a, b) {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        if (a[0] === "—") return 1;
+        if (b[0] === "—") return -1;
+        return String(a[0]).localeCompare(String(b[0]), undefined, { numeric: true });
+      });
+    const monthKeys = Object.keys(monthCount)
+      .map(function (x) { return Number(x); })
+      .filter(function (x) { return !isNaN(x); })
+      .sort(function (a, b) { return a - b; });
+
+    const subjTotalsForCharts = {};
+    Object.keys(roomSubjectCount).forEach(function (rm) {
+      const obj = roomSubjectCount[rm];
+      if (!obj) return;
+      Object.keys(obj).forEach(function (s) {
+        subjTotalsForCharts[s] = (subjTotalsForCharts[s] || 0) + obj[s];
+      });
+    });
+    const sortedSubjectsForCharts = Object.keys(subjTotalsForCharts).sort(function (a, b) {
+      const diff = subjTotalsForCharts[b] - subjTotalsForCharts[a];
+      if (diff !== 0) return diff;
+      return String(a).localeCompare(String(b), undefined, { numeric: true });
+    });
+    const topSubjectsForCharts = sortedSubjectsForCharts.slice(0, COMPLAINT_STACK_TOP_N);
+
+    const tickColor = "#94a3b8";
+    const gridColor = "rgba(148,163,184,0.22)";
+
+    if (complaintBarChart) {
+      complaintBarChart.destroy();
+      complaintBarChart = null;
+    }
+    const barCanvas = document.getElementById("complaintBarRooms");
+
+    if (typeof ChartDataLabels !== "undefined" && !window._complaintDataLabelsRegistered) {
+      Chart.register(ChartDataLabels);
+      window._complaintDataLabelsRegistered = true;
+    }
+
+    if (barCanvas && roomPairs.length) {
+      const noRoomLbl = C.barNoRoomLabel || "—";
+      const chartRoomKeys = roomPairs.map(function (p) { return p[0]; });
+      const chartRoomLabels = chartRoomKeys.map(function (k) {
+        return k === "—" ? noRoomLbl : k;
+      });
+      const topSubjects = topSubjectsForCharts;
+      const otherLabel = C.barOtherSubjects || "Other";
+      const barStackBorder = "rgba(15,23,42,0.45)";
+      const barStackBorderW = 1;
+      const barEndRadius = 10;
+
+      var barHost = document.getElementById("complaintBarHost");
+      var nRooms = chartRoomKeys.length;
+      var barDesktop =
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(min-width: 769px)").matches;
+      var barLegendPx = barDesktop ? 96 : 118;
+      var barChrome = barDesktop ? 18 : 22;
+      var barRowIdeal = barDesktop ? 16 : 26;
+      var barMaxBody = barDesktop
+        ? Math.max(168, Math.floor(window.innerHeight * 0.19))
+        : Math.max(228, Math.floor(window.innerHeight * 0.38));
+      var barWantH = Math.max(barDesktop ? 142 : 198, nRooms * barRowIdeal + barLegendPx + barChrome);
+      var barHostH = Math.min(barMaxBody, barWantH);
+      var barRowPx = (barHostH - barLegendPx - barChrome) / Math.max(1, nRooms);
+      barRowPx = Math.max(barDesktop ? 11 : 12, Math.min(48, barRowPx));
+      barHostH = Math.round(nRooms * barRowPx + barLegendPx + barChrome);
+      var barYTick = barRowPx < 20 ? 9 : barRowPx < 26 ? 10 : 11;
+      if (barHost) barHost.style.height = barHostH + "px";
+      var barThicknessPx = Math.max(8, Math.round(barRowPx));
+
+      const datasets = [];
+      for (let si = 0; si < topSubjects.length; si++) {
+        const subj = topSubjects[si];
+        datasets.push({
+          label: subj,
+          data: chartRoomKeys.map(function (room) {
+            const o = roomSubjectCount[room];
+            return o && o[subj] ? o[subj] : 0;
+          }),
+          backgroundColor: COMPLAINT_STACK_COLORS[si % COMPLAINT_STACK_COLORS.length],
+          stack: "subj",
+          maxBarThickness: barThicknessPx,
+          borderColor: barStackBorder,
+          borderWidth: barStackBorderW,
+          borderRadius: {
+            topLeft: 0,
+            bottomLeft: 0,
+            topRight: barEndRadius,
+            bottomRight: barEndRadius
+          },
+          borderSkipped: false
+        });
+      }
+
+      const otherCounts = chartRoomKeys.map(function (room) {
+        const o = roomSubjectCount[room] || {};
+        let sum = 0;
+        Object.keys(o).forEach(function (s) {
+          if (topSubjects.indexOf(s) === -1) sum += o[s];
+        });
+        return sum;
+      });
+      if (otherCounts.some(function (v) { return v > 0; })) {
+        datasets.push({
+          label: otherLabel,
+          data: otherCounts,
+          backgroundColor: COMPLAINT_STACK_COLORS[COMPLAINT_STACK_COLORS.length - 1],
+          stack: "subj",
+          maxBarThickness: barThicknessPx,
+          borderColor: barStackBorder,
+          borderWidth: barStackBorderW,
+          borderRadius: {
+            topLeft: 0,
+            bottomLeft: 0,
+            topRight: barEndRadius,
+            bottomRight: barEndRadius
+          },
+          borderSkipped: false
+        });
+      }
+
+      const barTooltipTotal =
+        currentLang === "zh"
+          ? function (t) { return "合計 " + t + " 筆"; }
+          : currentLang === "id"
+          ? function (t) { return "Jumlah: " + t; }
+          : function (t) { return "Total: " + t; };
+
+      complaintBarChart = new Chart(barCanvas, {
+        type: "bar",
+        data: {
+          labels: chartRoomLabels,
+          datasets: datasets
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: {
+            padding: { bottom: 2, top: 0, left: 0, right: barDesktop ? 8 : 10 }
+          },
+          datasets: {
+            bar: {
+              categoryPercentage: 1,
+              barPercentage: 1
+            }
+          },
+          plugins: {
+            legend: {
+              display: true,
+              position: "bottom",
+              align: "center",
+              maxHeight: barDesktop ? 64 : 92,
+              labels: {
+                boxWidth: 10,
+                boxHeight: 10,
+                font: { size: barDesktop ? 9 : 10, weight: "500", family: "system-ui,Segoe UI,sans-serif" },
+                color: "#f8fafc",
+                padding: barDesktop ? 4 : 7,
+                usePointStyle: true,
+                pointStyle: "rect",
+                generateLabels: function (chart) {
+                  return chart.data.datasets.map(function (dataset, i) {
+                    const txt = complaintTruncLegend(dataset.label, 48);
+                    return {
+                      text: txt || "(—)",
+                      fillStyle: dataset.backgroundColor,
+                      strokeStyle: dataset.backgroundColor,
+                      lineWidth: 0,
+                      fontColor: "#f8fafc",
+                      hidden: !chart.isDatasetVisible(i),
+                      datasetIndex: i,
+                      index: i
+                    };
+                  });
+                }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function (ctx) {
+                  const v = ctx.parsed.x ?? ctx.raw;
+                  return String(ctx.dataset.label) + ": " + v;
+                },
+                footer: function (items) {
+                  if (!items.length) return "";
+                  let t = 0;
+                  for (let fi = 0; fi < items.length; fi++) {
+                    t += Number(items[fi].parsed.x) || 0;
+                  }
+                  return barTooltipTotal(t);
+                }
+              }
+            },
+            datalabels: {
+              display: function (ctx) {
+                const v = ctx.dataset.data[ctx.dataIndex];
+                return v != null && Number(v) > 0;
+              },
+              color: "#0f172a",
+              font: { size: barRowPx < 22 ? 10 : 12, weight: "800" },
+              formatter: function (v) {
+                return Number(v) >= 1 ? String(Math.round(Number(v))) : "";
+              },
+              clamp: true,
+              textStrokeColor: "rgba(255,255,255,0.35)",
+              textStrokeWidth: 2
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              beginAtZero: true,
+              ticks: { color: tickColor, precision: 0, stepSize: 1 },
+              grid: { color: "rgba(148,163,184,0.2)", lineWidth: 1 }
+            },
+            y: {
+              stacked: false,
+              ticks: {
+                color: "#f1f5f9",
+                font: { size: barYTick, weight: "600" },
+                autoSkip: false,
+                padding: 4
+              },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    } else if (barCanvas && complaintBarChart === null) {
+      var barHostClear = document.getElementById("complaintBarHost");
+      if (barHostClear) barHostClear.style.height = "";
+      const ctx = barCanvas.getContext("2d");
+      if (ctx) ctx.clearRect(0, 0, barCanvas.width, barCanvas.height);
+    }
+
+    if (complaintTrendChart) {
+      complaintTrendChart.destroy();
+      complaintTrendChart = null;
+    }
+    const trendCanvas = document.getElementById("complaintLineTrend");
+    if (trendCanvas) {
+      if (monthKeys.length) {
+        const Lm = LANGS[currentLang];
+        const monthLab = Lm.months ? Lm.months.bind(Lm) : function (m) { return String(m); };
+        const distinctY = new Set(monthKeys.map(function (k) { return Math.floor(k / 100); }));
+        const showY = distinctY.size > 1;
+        const trendLabels = monthKeys.map(function (k) {
+          const y = Math.floor(k / 100);
+          const m = k % 100;
+          if (!showY) return monthLab(m);
+          return String(y).slice(-2) + "/" + monthLab(m);
+        });
+        const otherLabelTr = C.barOtherSubjects || "Other";
+        const trendDatasets = [];
+        if (subjectFilter) {
+          trendDatasets.push({
+            label: complaintTruncLegend(subjectFilter, 36),
+            data: monthKeys.map(function (mk) {
+              const o = monthSubjectCount[mk];
+              return o && o[subjectFilter] ? o[subjectFilter] : 0;
+            }),
+            borderColor: COMPLAINT_STACK_COLORS[0],
+            backgroundColor: "rgba(56,189,248,0.15)",
+            fill: true,
+            tension: 0.25,
+            pointRadius: 4,
+            pointBackgroundColor: COMPLAINT_STACK_COLORS[0],
+            borderWidth: 2
+          });
+        } else {
+          const topT = topSubjectsForCharts;
+          for (let di = 0; di < topT.length; di++) {
+            const sj = topT[di];
+            trendDatasets.push({
+              label: complaintTruncLegend(sj, 36),
+              data: monthKeys.map(function (mk) {
+                const o = monthSubjectCount[mk];
+                return o && o[sj] ? o[sj] : 0;
+              }),
+              borderColor: COMPLAINT_STACK_COLORS[di % COMPLAINT_STACK_COLORS.length],
+              backgroundColor: "transparent",
+              fill: false,
+              tension: 0.25,
+              pointRadius: 3,
+              pointBackgroundColor: COMPLAINT_STACK_COLORS[di % COMPLAINT_STACK_COLORS.length],
+              borderWidth: 2
+            });
+          }
+          const otherTrendData = monthKeys.map(function (mk) {
+            const o = monthSubjectCount[mk] || {};
+            let sumO = 0;
+            Object.keys(o).forEach(function (sj) {
+              if (topT.indexOf(sj) === -1) sumO += o[sj];
+            });
+            return sumO;
+          });
+          if (otherTrendData.some(function (v) { return v > 0; })) {
+            trendDatasets.push({
+              label: complaintTruncLegend(otherLabelTr, 28),
+              data: otherTrendData,
+              borderColor: COMPLAINT_STACK_COLORS[COMPLAINT_STACK_COLORS.length - 1],
+              backgroundColor: "transparent",
+              fill: false,
+              tension: 0.25,
+              pointRadius: 3,
+              pointBackgroundColor: COMPLAINT_STACK_COLORS[COMPLAINT_STACK_COLORS.length - 1],
+              borderWidth: 2
+            });
+          }
+          if (trendDatasets.length === 1) {
+            trendDatasets[0].fill = true;
+            trendDatasets[0].backgroundColor = "rgba(56,189,248,0.15)";
+            trendDatasets[0].pointRadius = 4;
+          }
+        }
+        if (!subjectFilter && trendDatasets.length > 1) {
+          trendDatasets.push({
+            label: complaintTruncLegend(C.trendTotal || "Total", 16),
+            data: monthKeys.map(function (mk) {
+              return monthCount[mk] || 0;
+            }),
+            borderColor: "#f8fafc",
+            backgroundColor: "transparent",
+            fill: false,
+            borderDash: [6, 4],
+            tension: 0.25,
+            pointRadius: 3,
+            pointBackgroundColor: "#f8fafc",
+            borderWidth: 2
+          });
+        }
+        const trendLegendOn = trendDatasets.length > 1;
+        complaintTrendChart = new Chart(trendCanvas, {
+          type: "line",
+          data: {
+            labels: trendLabels,
+            datasets: trendDatasets
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: trendLegendOn ? 1.05 : 1.35,
+            plugins: {
+              legend: {
+                display: trendLegendOn,
+                position: "bottom",
+                align: "center",
+                labels: {
+                  boxWidth: 10,
+                  boxHeight: 10,
+                  padding: 6,
+                  font: { size: 10, weight: "500", family: "system-ui,Segoe UI,sans-serif" },
+                  color: "#e5e7eb",
+                  usePointStyle: true,
+                  pointStyle: "line"
+                }
+              },
+              tooltip: {
+                mode: "index",
+                intersect: false,
+                callbacks: {
+                  label: function (ctx) {
+                    const v = ctx.parsed.y;
+                    const lab = ctx.dataset.label != null ? String(ctx.dataset.label) : "";
+                    return lab ? lab + ": " + v : String(v);
+                  }
+                }
+              },
+              datalabels: { display: false }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  color: tickColor,
+                  precision: 0
+                },
+                grid: { color: gridColor }
+              },
+              x: {
+                ticks: { color: "#e5e7eb", font: { size: 11 }, maxRotation: 45, minRotation: 0 },
+                grid: { color: "rgba(148,163,184,0.15)" }
+              }
+            }
+          }
+        });
+      } else {
+        const ctx = trendCanvas.getContext("2d");
+        if (ctx) ctx.clearRect(0, 0, trendCanvas.width, trendCanvas.height);
+      }
+    }
+
+    theadC.innerHTML = "";
+    tbodyC.innerHTML = "";
+
+    const trh = document.createElement("tr");
+    function addThCompl(tr, text) {
+      const th = document.createElement("th");
+      th.textContent = text || "";
+      tr.appendChild(th);
+    }
+    addThCompl(trh, C.colDate);
+    [
+      C.colRoom,
+      C.colSubject,
+      C.colFo,
+      C.colEng,
+      C.colHk,
+      C.colRepair,
+      C.colTime,
+      C.colResult,
+      C.colProgress
+    ].forEach(function (text) {
+      addThCompl(trh, text);
+    });
+    theadC.appendChild(trh);
+
+    function cell(v) {
+      if (v === null || v === undefined) return "";
+      if (typeof v === "number" && !isNaN(v)) return String(v);
+      return String(v);
+    }
+
+    for (let r = 0; r < displayRows.length; r++) {
+      const row = displayRows[r];
+      const tr = document.createElement("tr");
+      if (isNoComplaintRow(row)) tr.style.opacity = "0.75";
+      const tdt = complaintRowDateObj(row);
+      const tdDate = document.createElement("td");
+      tdDate.textContent = tdt ? tdt.str : "";
+      tr.appendChild(tdDate);
+      [
+        cell(complaintRoomStr(row)),
+        cell(cPick(row, "SUBJECT", "Subject", "subject")),
+        cell(cPick(row, "FO", "Fo")),
+        cell(cPick(row, "ENG", "Eng")),
+        cell(cPick(row, "HK", "Hk")),
+        cell(cPick(row, "REPAIR", "Repair")),
+        cell(complaintRowTime(row)),
+        cell(cPick(row, "RESULT", "Result")),
+        cell(cPick(row, "PROGRES", "PROGRESS", "Progress"))
+      ].forEach(function (text) {
+        const td = document.createElement("td");
+        td.textContent = text;
+        tr.appendChild(td);
+      });
+      tbodyC.appendChild(tr);
+    }
+  }
 
   // ===== 表格渲染 =====
   function render(){
@@ -2542,13 +3650,29 @@ function updateLangUI(){
 
     // 更新圖表
     renderCharts(rows);
+    renderComplaints();
   }
 
 
   // ===== 初始化 =====
   async function init(){
     try {
-      RAW = await fetchJSON(DATA_URL);
+      const payload = await fetchJSON(DATA_URL);
+      if (payload && payload.error) {
+        throw new Error(payload.message || "API error");
+      }
+      if (Array.isArray(payload)) {
+        RAW = payload;
+        COMPLAINTS_RAW = [];
+      } else if (payload && Array.isArray(payload.revenue)) {
+        RAW = payload.revenue;
+        COMPLAINTS_RAW = Array.isArray(payload.complaints)
+          ? payload.complaints
+          : [];
+      } else {
+        RAW = [];
+        COMPLAINTS_RAW = [];
+      }
     } catch(e){
       console.error("讀取資料失敗:", e);
       loadingOverlay.innerHTML = "<p>讀取資料失敗，請檢查 API URL</p>";
@@ -2582,6 +3706,42 @@ function updateLangUI(){
     updateLangUI();
     initMetricList();   // ✅ 新增
     render();
+
+    if (!window._complaintListeners) {
+      const cr = document.getElementById("complaintRoomFilter");
+      const crT = document.getElementById("complaintRoomFilterTable");
+      const cs = document.getElementById("complaintSubjectFilter");
+      const csT = document.getElementById("complaintSubjectFilterTable");
+      const hn = document.getElementById("complaintHideNoComplaint");
+      if (cr && crT) {
+        cr.addEventListener("change", function () {
+          crT.value = cr.value;
+          renderComplaints();
+        });
+        crT.addEventListener("change", function () {
+          cr.value = crT.value;
+          renderComplaints();
+        });
+      } else {
+        if (cr) cr.addEventListener("change", renderComplaints);
+        if (crT) crT.addEventListener("change", renderComplaints);
+      }
+      if (cs && csT) {
+        cs.addEventListener("change", function () {
+          csT.value = cs.value;
+          renderComplaints();
+        });
+        csT.addEventListener("change", function () {
+          cs.value = csT.value;
+          renderComplaints();
+        });
+      } else {
+        if (cs) cs.addEventListener("change", renderComplaints);
+        if (csT) csT.addEventListener("change", renderComplaints);
+      }
+      if (hn) hn.addEventListener("change", renderComplaints);
+      window._complaintListeners = true;
+    }
 
     // 隱藏 loading 畫面
     loadingOverlay.style.display="none";
@@ -2856,7 +4016,9 @@ function updateLangUI(){
     &nbsp;&nbsp;&nbsp;• 匯率來源：open.er-api.com 即時 API<br/>
     &nbsp;&nbsp;&nbsp;• 使用者可手動點擊「Update」按鈕立即更新<br/>
     &nbsp;&nbsp;&nbsp;• 系統會自動每 30 分鐘更新一次<br/>
-    &nbsp;&nbsp;&nbsp;• 若 API 錯誤或網路異常，系統會保留上次成功的匯率
+    &nbsp;&nbsp;&nbsp;• 若 API 錯誤或網路異常，系統會保留上次成功的匯率<br/>
+    <br/>
+    3. 客訴資料來自試算表「Complaints」；與上方「期間」篩選一致。可依房號查看歷史；左圖為橫向堆疊長條（左側房號、顏色＝主題），右為所選期間內每月實際客訴趨勢。
   </div>
 
 </body>

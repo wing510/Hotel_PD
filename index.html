@@ -38,12 +38,67 @@ header {
   box-sizing: border-box;
 }
 
-    /* 頂端列：左側三條槓 + 右側標題 */
+/* 營收／客訴：小分頁，與「酒店業績儀表板」同一列、緊貼標題右側 */
+.main-tabs {
+  display: inline-flex;
+  width: auto;
+  max-width: 100%;
+  gap: 4px;
+  margin: 0;
+  padding: 0 0 0 10px;
+  border: none;
+  border-left: 1px solid rgba(148,163,184,0.28);
+  background: transparent;
+  box-sizing: border-box;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  align-items: center;
+}
+.main-tab {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 5px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+  background: rgba(15,23,42,0.65);
+  border: 1px solid rgba(148,163,184,0.35);
+  border-radius: 6px;
+  cursor: pointer;
+  box-sizing: border-box;
+  line-height: 1.25;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+.main-tab:hover {
+  color: #e5e7eb;
+  background: rgba(30,41,59,0.85);
+  border-color: rgba(148,163,184,0.5);
+}
+.main-tab:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+.main-tab.main-tab--active {
+  color: #f8fafc;
+  background: rgba(51,65,85,0.95);
+  border-color: rgba(186,230,253,0.45);
+}
+.main-tab-panel[hidden] {
+  display: none !important;
+}
+
+    /* 頂端列：三條槓 + 標題 + 營收／客訴分頁（同一列，窄螢幕可換行） */
     .top-bar {
       display: flex;
       align-items: center;
-      gap: 10px;
+      flex-wrap: wrap;
+      gap: 8px 10px;
       margin-bottom: 10px;
+    }
+    .top-bar h1 {
+      flex: 0 1 auto;
+      min-width: 0;
     }
 
 /* 標題字型大小 */
@@ -599,11 +654,32 @@ td.num, th.num {
     /* === 手機板調整 === */
     @media (max-width: 768px) {
       header {
-        padding: 10px 0;
+        padding: 6px 0;
       }
 
       .wrap {
         padding: 10px 12px;
+      }
+      header .wrap {
+        padding-top: 6px;
+        padding-bottom: 4px;
+      }
+      main.wrap {
+        padding-top: 6px;
+      }
+      .top-bar {
+        margin-bottom: 0;
+      }
+      .main-tabs {
+        padding-left: 8px;
+        border-left-color: rgba(148,163,184,0.22);
+      }
+      .main-tab {
+        padding: 4px 10px;
+        font-size: 13px;
+      }
+      .top-bar {
+        margin-bottom: 8px;
       }
 
       /* 三條槓在手機顯示 */
@@ -972,30 +1048,24 @@ td.num, th.num {
   gap: 8px;
 }
 
-/* 客訴／維修區 */
+/* 客訴／維修區（不另加分隔線與大標題，僅保留下拉） */
 .complaints-section {
-  margin-top: 28px;
-  padding-top: 22px;
-  border-top: 1px solid rgba(148,163,184,0.35);
-}
-.complaints-section h2 {
-  font-size: 17px;
-  font-weight: 600;
-  color: #e5e7eb;
-  margin: 0 0 6px;
-  letter-spacing: 0.04em;
+  margin-top: 12px;
+  padding-top: 0;
+  border-top: none;
 }
 .complaints-toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   gap: 12px 16px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 .complaints-toolbar .field {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
   min-width: 120px;
 }
 /* 房號下拉盡量短，把橫向空間留給主題（避免主題一長就換行） */
@@ -1023,12 +1093,6 @@ td.num, th.num {
   .complaints-toolbar {
     flex-wrap: nowrap;
   }
-}
-.complaints-toolbar label.f {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #9ca3af;
 }
 .complaints-toolbar select {
   min-width: 140px;
@@ -1242,6 +1306,10 @@ td.num, th.num {
           <span></span>
         </button>
         <h1 id="pageTitle">酒店業績儀表板</h1>
+        <nav class="main-tabs" role="tablist" id="mainTabsNav" aria-label="儀表板分區">
+          <button type="button" class="main-tab main-tab--active" role="tab" id="mainTabRevenue" aria-selected="true" aria-controls="mainPanelRevenue" data-main-tab="revenue" tabindex="0">營收</button>
+          <button type="button" class="main-tab" role="tab" id="mainTabComplaints" aria-selected="false" aria-controls="mainPanelComplaints" data-main-tab="complaints" tabindex="-1">客訴</button>
+        </nav>
       </div>
 
       <!-- 篩選器區塊：桌機顯示在上方；手機會變成左側滑出菜單 -->
@@ -1322,6 +1390,7 @@ td.num, th.num {
   </header>
 
   <main class="wrap">
+    <div id="mainPanelRevenue" role="tabpanel" aria-labelledby="mainTabRevenue" class="main-tab-panel">
     <!-- 圖表區 -->
     <div class="charts">
       <!-- 左側：圓餅圖 -->
@@ -1374,17 +1443,26 @@ td.num, th.num {
       <tfoot id="tfoot"></tfoot>
     </table>
 
+    <!-- 備註區 -->
+    <div class="note">
+      <button onclick="updateRates()" 
+  style="margin-right:10px;padding:6px 14px;border-radius:999px;border:1px solid rgba(148,163,184,0.8);background:radial-gradient(circle at top,#0b1120 0,#020617 70%);color:#e5e7eb;font-size:12px;box-shadow:0 8px 22px rgba(15,23,42,0.9);">
+  Update
+</button>
+
+      <span id="noteRate"></span>
+    </div>
+    </div><!-- end mainPanelRevenue -->
+
+    <div id="mainPanelComplaints" role="tabpanel" aria-labelledby="mainTabComplaints" class="main-tab-panel" hidden>
     <!-- 客訴／維修（COMPLAINTS_RAW） -->
-    <section class="complaints-section" id="complaintsSection" aria-labelledby="complaintsTitle">
-      <h2 id="complaintsTitle">客訴與維修紀錄</h2>
+    <section class="complaints-section" id="complaintsSection" aria-label="客訴與維修紀錄">
       <div class="complaints-toolbar" id="complaintsToolbarTop">
         <div class="field field-complaint-room">
-          <label class="f" id="lblComplaintRoom" for="complaintRoomFilter">房號</label>
-          <select id="complaintRoomFilter"></select>
+          <select id="complaintRoomFilter" aria-label="房號"></select>
         </div>
         <div class="field field-complaint-subject">
-          <label class="f" id="lblComplaintSubject" for="complaintSubjectFilter">主題</label>
-          <select id="complaintSubjectFilter"></select>
+          <select id="complaintSubjectFilter" aria-label="主題"></select>
         </div>
       </div>
       <div class="complaints-warn" id="complaintsWarn" hidden></div>
@@ -1413,12 +1491,10 @@ td.num, th.num {
       </div>
       <div class="complaints-toolbar complaints-toolbar-table" id="complaintsToolbarTable">
         <div class="field field-complaint-room">
-          <label class="f" id="lblComplaintRoomTable" for="complaintRoomFilterTable">房號</label>
-          <select id="complaintRoomFilterTable"></select>
+          <select id="complaintRoomFilterTable" aria-label="房號"></select>
         </div>
         <div class="field field-complaint-subject">
-          <label class="f" id="lblComplaintSubjectTable" for="complaintSubjectFilterTable">主題</label>
-          <select id="complaintSubjectFilterTable"></select>
+          <select id="complaintSubjectFilterTable" aria-label="主題"></select>
         </div>
       </div>
       <div id="complaintsTableWrap">
@@ -1429,16 +1505,8 @@ td.num, th.num {
       </div>
       <p class="complaints-meta" id="complaintsEmpty" hidden></p>
     </section>
+    </div><!-- end mainPanelComplaints -->
 
-    <!-- 備註區 -->
-    <div class="note">
-      <button onclick="updateRates()" 
-  style="margin-right:10px;padding:6px 14px;border-radius:999px;border:1px solid rgba(148,163,184,0.8);background:radial-gradient(circle at top,#0b1120 0,#020617 70%);color:#e5e7eb;font-size:12px;box-shadow:0 8px 22px rgba(15,23,42,0.9);">
-  Update
-</button>
-
-      <span id="noteRate"></span>
-    </div>
   </main>
 
 <script>
@@ -1552,6 +1620,11 @@ td.num, th.num {
   const LANGS = {
     zh: {
       title: "酒店業績儀表板",
+      tabs: {
+        revenue: "營收",
+        complaints: "客訴",
+        tablistLabel: "儀表板分區"
+      },
       filters: { 
         year: "年份", 
         month: "月份", 
@@ -1643,6 +1716,11 @@ td.num, th.num {
 
     en: {
       title: "Hotel Performance Dashboard",
+      tabs: {
+        revenue: "Revenue",
+        complaints: "Complaints",
+        tablistLabel: "Main sections"
+      },
       filters: { 
         year: "Year", 
         month: "Month", 
@@ -1732,6 +1810,11 @@ td.num, th.num {
 
     id: {
       title: "Dasbor Kinerja Hotel",
+      tabs: {
+        revenue: "Pendapatan",
+        complaints: "Keluhan",
+        tablistLabel: "Bagian utama"
+      },
       filters: { 
         year: "Tahun", 
         month: "Bulan", 
@@ -1851,18 +1934,28 @@ function updateLangUI(){
     document.getElementById("titleLine").textContent = L.chartTitles.line;
     document.getElementById("noteRate").textContent = getNoteText(currentLang);
 
+    const Ttabs = L.tabs;
+    if (Ttabs) {
+      const nav = document.getElementById("mainTabsNav");
+      if (nav) nav.setAttribute("aria-label", Ttabs.tablistLabel || "");
+      const trb = document.getElementById("mainTabRevenue");
+      const tcb = document.getElementById("mainTabComplaints");
+      if (trb) trb.textContent = Ttabs.revenue || "";
+      if (tcb) tcb.textContent = Ttabs.complaints || "";
+    }
+
     const C = L.complaints;
     if (C) {
-      const ct = document.getElementById("complaintsTitle");
-      if (ct) ct.textContent = C.sectionTitle || "";
-      const lr = document.getElementById("lblComplaintRoom");
-      if (lr) lr.textContent = C.room || "";
-      const lrT = document.getElementById("lblComplaintRoomTable");
-      if (lrT) lrT.textContent = C.room || "";
-      const lsub = document.getElementById("lblComplaintSubject");
-      if (lsub) lsub.textContent = C.subject || "";
-      const lsubT = document.getElementById("lblComplaintSubjectTable");
-      if (lsubT) lsubT.textContent = C.subject || "";
+      const secC = document.getElementById("complaintsSection");
+      if (secC) secC.setAttribute("aria-label", C.sectionTitle || "");
+      const rf = document.getElementById("complaintRoomFilter");
+      const sf = document.getElementById("complaintSubjectFilter");
+      const rfT = document.getElementById("complaintRoomFilterTable");
+      const sfT = document.getElementById("complaintSubjectFilterTable");
+      if (rf) rf.setAttribute("aria-label", C.room || "");
+      if (sf) sf.setAttribute("aria-label", C.subject || "");
+      if (rfT) rfT.setAttribute("aria-label", C.room || "");
+      if (sfT) sfT.setAttribute("aria-label", C.subject || "");
       const lh = document.getElementById("lblComplaintHideNo");
       if (lh) lh.textContent = C.hideNo || "";
       const tr = document.getElementById("titleComplaintByRoom");
@@ -4243,8 +4336,55 @@ function updateLangUI(){
   // 每 30 分鐘自動更新匯率
   setInterval(updateRates, 30*60*1000);
 
+  function setupMainTabNav() {
+    const btnR = document.getElementById("mainTabRevenue");
+    const btnC = document.getElementById("mainTabComplaints");
+    const panR = document.getElementById("mainPanelRevenue");
+    const panC = document.getElementById("mainPanelComplaints");
+    if (!btnR || !btnC || !panR || !panC) return;
+
+    function bumpCharts() {
+      requestAnimationFrame(function () {
+        try {
+          if (typeof trendChart !== "undefined" && trendChart) trendChart.resize();
+          if (typeof pieChart !== "undefined" && pieChart) pieChart.resize();
+          if (typeof complaintBarChart !== "undefined" && complaintBarChart) complaintBarChart.resize();
+          if (typeof complaintTrendChart !== "undefined" && complaintTrendChart) complaintTrendChart.resize();
+        } catch (e0) {}
+      });
+      setTimeout(function () {
+        try {
+          if (typeof trendChart !== "undefined" && trendChart) trendChart.resize();
+          if (typeof pieChart !== "undefined" && pieChart) pieChart.resize();
+          if (typeof complaintBarChart !== "undefined" && complaintBarChart) complaintBarChart.resize();
+          if (typeof complaintTrendChart !== "undefined" && complaintTrendChart) complaintTrendChart.resize();
+        } catch (e1) {}
+      }, 160);
+    }
+
+    function go(which) {
+      var rev = which === "revenue";
+      panR.hidden = !rev;
+      panC.hidden = rev;
+      btnR.setAttribute("aria-selected", rev ? "true" : "false");
+      btnC.setAttribute("aria-selected", rev ? "false" : "true");
+      btnR.classList.toggle("main-tab--active", rev);
+      btnC.classList.toggle("main-tab--active", !rev);
+      btnR.tabIndex = rev ? 0 : -1;
+      btnC.tabIndex = rev ? -1 : 0;
+      window.scrollTo(0, 0);
+      bumpCharts();
+    }
+
+    btnR.addEventListener("click", function () { go("revenue"); });
+    btnC.addEventListener("click", function () { go("complaints"); });
+  }
+
   // 頁面載入完成 → 初始化
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener("DOMContentLoaded", function () {
+    setupMainTabNav();
+    init();
+  });
 
   // 手機版：展開/收合欄位按鈕
   const toggleColsBtn = document.getElementById('toggleColsBtn');

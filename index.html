@@ -1103,17 +1103,20 @@ td.num, th.num {
   text-transform: uppercase;
   color: #9ca3af;
 }
-/* 與 .chart-right canvas 一致：不強制 height，交給 Chart.js 依容器計算，避免 iOS 上 canvas 變 0×0 */
+/*
+ * 客訴 canvas 不要用 width:100% !important：會蓋掉 Chart.js 的 inline 尺寸。
+ * 橫向長條圖 maintainAspectRatio:false 在 iOS 上常因此算出高度 0 → 整張不見。
+ */
 .complaints-charts canvas {
   display: block;
   max-width: 100%;
-  width: 100% !important;
 }
 /* 橫向堆疊長條：高度由 JS 依房數設定（避免房多時被壓成細線） */
 .complaint-bar-host {
   width: 100%;
   position: relative;
   min-height: 200px;
+  flex-shrink: 0;
 }
 @media (min-width: 769px) {
   .complaint-bar-host {
@@ -1151,8 +1154,9 @@ td.num, th.num {
   }
 }
 @media (max-width: 768px) {
+  /* GPT 說的點合理：flex 子項 min-height:0 易被壓成「無高度」；折線已用 maintainAspectRatio，仍保留下限較穩 */
   .complaint-trend-host {
-    min-height: 0;
+    min-height: 200px;
   }
 }
 #complaintsTableWrap {
@@ -1167,11 +1171,14 @@ td.num, th.num {
   .complaints-charts {
     flex-direction: column;
   }
+  .complaints-charts .compl-chart-card {
+    flex-shrink: 0;
+  }
   .complaints-charts .compl-chart-card.complaint-line-card {
     order: -1;
   }
   .complaint-bar-host {
-    min-height: 165px;
+    min-height: 180px;
   }
   .complaints-charts .compl-chart-card.complaint-bar-card {
     padding: 8px 10px;
@@ -3034,7 +3041,11 @@ function updateLangUI(){
       barRowPx = Math.max(barDesktop ? 11 : 12, Math.min(48, barRowPx));
       barHostH = Math.round(nRooms * barRowPx + barLegendPx + barChrome);
       var barYTick = barRowPx < 20 ? 9 : barRowPx < 26 ? 10 : 11;
-      if (barHost) barHost.style.height = barHostH + "px";
+      if (barHost) {
+        barHost.style.height = barHostH + "px";
+        /* 與 height 一致，避免直向 flex 版面把 host 壓到比圖表矮、canvas 變 0 高 */
+        barHost.style.minHeight = barHostH + "px";
+      }
       var barThicknessPx = Math.max(8, Math.round(barRowPx));
 
       const datasets = [];
@@ -3205,7 +3216,10 @@ function updateLangUI(){
       });
     } else if (barCanvas && complaintBarChart === null) {
       var barHostClear = document.getElementById("complaintBarHost");
-      if (barHostClear) barHostClear.style.height = "";
+      if (barHostClear) {
+        barHostClear.style.height = "";
+        barHostClear.style.minHeight = "";
+      }
       const ctx = barCanvas.getContext("2d");
       if (ctx) ctx.clearRect(0, 0, barCanvas.width, barCanvas.height);
     }

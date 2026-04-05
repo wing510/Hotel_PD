@@ -2457,7 +2457,7 @@ function updateLangUI(){
 
     /*
      * 勿在此註冊 ChartDataLabels：若在 new trendChart 之前註冊，易干擾營收多軸折線圖。
-     * 改為僅在「桌機、建立客訴長條圖」前註冊（見 mountComplaintBarChart）。
+     * 改為僅在「建立客訴長條圖」前註冊（見 mountComplaintBarChart；手機／桌機皆同）。
      */
 
     // 桌機/手機不同刻度數（桌機=10、手機=8）
@@ -2781,8 +2781,17 @@ function updateLangUI(){
     return normalizeComplaintRoomToken(raw);
   }
 
+  /** 試算表常見拼字：與標準主題合併，篩選／圖表／統計一致 */
+  function normalizeComplaintSubject(s) {
+    s = String(s || "").trim().replace(/\s+/g, " ");
+    if (!s) return "";
+    if (/^ACTIMER$/i.test(s)) return "AC TIMER";
+    if (/^AC\s+TMER$/i.test(s)) return "AC TIMER";
+    return s;
+  }
+
   function complaintSubjectStr(row) {
-    const s = String(cPick(row, "SUBJECT", "Subject", "subject") || "").trim();
+    const s = normalizeComplaintSubject(cPick(row, "SUBJECT", "Subject", "subject"));
     return s || "—";
   }
 
@@ -3064,7 +3073,7 @@ function updateLangUI(){
         window.matchMedia("(min-width: 769px)").matches;
       var barLegendPx = 88;
       var barChrome = barDesktop ? 16 : 14;
-      var barMaxRow = barDesktop ? 34 : 36;
+      var barMaxRow = barDesktop ? 34 : 40;
       var barRowPx;
       var barHostH;
       if (barDesktop) {
@@ -3088,9 +3097,9 @@ function updateLangUI(){
           barRowPx = Math.max(3, Math.floor((barHostH - barLegendPx - barChrome) / Math.max(1, nRooms)));
         }
       } else {
-        /* 手機：每列至少約 15px 才看得見；總高可超過螢幕，靠 .complaint-bar-viewport 捲動 */
-        var readableMinRow = 15;
-        var innerTarget = Math.max(nRooms * readableMinRow, 260);
+        /* 手機：每列至少約 18px（房號／長條較好讀）；總高可超過螢幕，靠 .complaint-bar-viewport 捲動 */
+        var readableMinRow = 18;
+        var innerTarget = Math.max(nRooms * readableMinRow, 288);
         barRowPx = Math.floor(innerTarget / Math.max(1, nRooms));
         barRowPx = Math.min(barMaxRow, Math.max(readableMinRow, barRowPx));
         barHostH = Math.round(nRooms * barRowPx + barLegendPx + barChrome);
@@ -3113,6 +3122,8 @@ function updateLangUI(){
         }
       }
       var barThicknessPx = Math.max(2, Math.min(barMaxRow, Math.round(barRowPx)));
+      /* Chart.js 實際分配的「每列高度」常大於我們用 barHost 估算的 barRowPx（圖例／軸實際吃高較少），
+       * 手機若仍設 maxBarThickness≈barRowPx，長條會被掐細、行距看起來很寬；桌機維持上限以免過粗。 */
       /* 手機用數字 borderRadius，避免部分 WebView 對物件寫法支援不佳 */
       var barBorderRadius = barDesktop
         ? { topLeft: 0, bottomLeft: 0, topRight: barEndRadius, bottomRight: barEndRadius }
@@ -3121,7 +3132,7 @@ function updateLangUI(){
       const datasets = [];
       for (let si = 0; si < topSubjects.length; si++) {
         const subj = topSubjects[si];
-        datasets.push({
+        var dsBar = {
           label: subj,
           data: chartRoomKeys.map(function (room) {
             const o = roomSubjectCount[room];
@@ -3129,12 +3140,13 @@ function updateLangUI(){
           }),
           backgroundColor: COMPLAINT_STACK_COLORS[si % COMPLAINT_STACK_COLORS.length],
           stack: "subj",
-          maxBarThickness: barThicknessPx,
           borderColor: barStackBorder,
           borderWidth: barStackBorderW,
           borderRadius: barBorderRadius,
           borderSkipped: false
-        });
+        };
+        if (barDesktop) dsBar.maxBarThickness = barThicknessPx;
+        datasets.push(dsBar);
       }
 
       const otherCounts = chartRoomKeys.map(function (room) {
@@ -3146,17 +3158,18 @@ function updateLangUI(){
         return sum;
       });
       if (otherCounts.some(function (v) { return v > 0; })) {
-        datasets.push({
+        var dsOther = {
           label: otherLabel,
           data: otherCounts,
           backgroundColor: COMPLAINT_STACK_COLORS[COMPLAINT_STACK_COLORS.length - 1],
           stack: "subj",
-          maxBarThickness: barThicknessPx,
           borderColor: barStackBorder,
           borderWidth: barStackBorderW,
           borderRadius: barBorderRadius,
           borderSkipped: false
-        });
+        };
+        if (barDesktop) dsOther.maxBarThickness = barThicknessPx;
+        datasets.push(dsOther);
       }
 
       const barTooltipTotal =
@@ -3167,7 +3180,7 @@ function updateLangUI(){
           : function (t) { return "Total: " + t; };
 
       function mountComplaintBarChart() {
-        if (barDesktop && typeof ChartDataLabels !== "undefined" && !window._complaintDataLabelsRegistered) {
+        if (typeof ChartDataLabels !== "undefined" && !window._complaintDataLabelsRegistered) {
           Chart.register(ChartDataLabels);
           window._complaintDataLabelsRegistered = true;
         }
@@ -3240,14 +3253,17 @@ function updateLangUI(){
                 }
               },
               datalabels: {
-                display: barDesktop
-                  ? function (ctx) {
-                      const v = ctx.dataset.data[ctx.dataIndex];
-                      return v != null && Number(v) > 0;
-                    }
-                  : false,
+                display: function (ctx) {
+                  const v = ctx.dataset.data[ctx.dataIndex];
+                  return v != null && Number(v) > 0;
+                },
                 color: "#0f172a",
-                font: { size: barRowPx < 22 ? 10 : 12, weight: "800" },
+                font: {
+                  size: barDesktop
+                    ? barRowPx < 22 ? 10 : 12
+                    : Math.max(7, Math.min(10, Math.round(barRowPx * 0.5))),
+                  weight: "800"
+                },
                 formatter: function (v) {
                   return Number(v) >= 1 ? String(Math.round(Number(v))) : "";
                 },
@@ -3562,7 +3578,7 @@ function updateLangUI(){
       tr.appendChild(tdDate);
       [
         cell(complaintRoomStr(row)),
-        cell(cPick(row, "SUBJECT", "Subject", "subject")),
+        cell(complaintSubjectStr(row)),
         cell(cPick(row, "FO", "Fo")),
         cell(cPick(row, "ENG", "Eng")),
         cell(cPick(row, "HK", "Hk")),

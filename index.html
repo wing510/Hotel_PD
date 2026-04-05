@@ -999,6 +999,32 @@ td.num, th.num {
   gap: 4px;
   min-width: 120px;
 }
+/* 房號下拉盡量短，把橫向空間留給主題（避免主題一長就換行） */
+.complaints-toolbar .field.field-complaint-room {
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 6.75rem;
+}
+.complaints-toolbar .field.field-complaint-room select {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+.complaints-toolbar .field.field-complaint-subject {
+  flex: 1 1 140px;
+  min-width: 0;
+  max-width: 100%;
+}
+.complaints-toolbar .field.field-complaint-subject select {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+@media (min-width: 400px) {
+  .complaints-toolbar {
+    flex-wrap: nowrap;
+  }
+}
 .complaints-toolbar label.f {
   font-size: 11px;
   text-transform: uppercase;
@@ -1079,6 +1105,12 @@ td.num, th.num {
 }
 .complaints-charts canvas {
   width: 100% !important;
+  display: block;
+}
+/* 手機 WebKit：長條圖 maintainAspectRatio:false 時，canvas 需填滿由 JS 設定的 host 高度，否則可能高度為 0 看不到圖 */
+.complaint-bar-host canvas {
+  height: 100% !important;
+  max-height: none;
 }
 /* 橫向堆疊長條：高度由 JS 依房數設定（避免房多時被壓成細線） */
 .complaint-bar-host {
@@ -1101,14 +1133,35 @@ td.num, th.num {
 .complaints-charts .compl-chart-card.complaint-bar-card canvas {
   max-height: none;
 }
-.complaints-charts .compl-chart-card.complaint-line-card canvas {
-  max-height: 260px;
+/* 折線圖：外層給穩定寬高，避免 iOS flex + 置中導致 canvas 有效高度為 0 */
+.complaint-trend-host {
+  width: 100%;
+  position: relative;
+  box-sizing: border-box;
 }
-/* 折線圖卡片：標題＋canvas 在卡片內垂直置中 */
+/* 折線圖卡片：改為靠上對齊，避免置中壓扁圖表區 */
 .complaints-charts .compl-chart-card.complaint-line-card {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+}
+@media (min-width: 769px) {
+  .complaint-trend-host {
+    min-height: 180px;
+  }
+  .complaints-charts .compl-chart-card.complaint-line-card .complaint-trend-host canvas {
+    max-height: 260px;
+    height: auto !important;
+  }
+}
+@media (max-width: 768px) {
+  .complaint-trend-host {
+    min-height: 220px;
+  }
+  .complaints-charts .compl-chart-card.complaint-line-card .complaint-trend-host canvas {
+    max-height: none !important;
+    height: 100% !important;
+  }
 }
 #complaintsTableWrap {
   overflow-x: auto;
@@ -1301,11 +1354,11 @@ td.num, th.num {
     <section class="complaints-section" id="complaintsSection" aria-labelledby="complaintsTitle">
       <h2 id="complaintsTitle">客訴與維修紀錄</h2>
       <div class="complaints-toolbar" id="complaintsToolbarTop">
-        <div class="field">
+        <div class="field field-complaint-room">
           <label class="f" id="lblComplaintRoom" for="complaintRoomFilter">房號</label>
           <select id="complaintRoomFilter"></select>
         </div>
-        <div class="field">
+        <div class="field field-complaint-subject">
           <label class="f" id="lblComplaintSubject" for="complaintSubjectFilter">主題</label>
           <select id="complaintSubjectFilter"></select>
         </div>
@@ -1321,7 +1374,9 @@ td.num, th.num {
         </div>
         <div class="compl-chart-card complaint-line-card">
           <h3 id="titleComplaintBySubject"></h3>
-          <canvas id="complaintLineTrend" height="220"></canvas>
+          <div class="complaint-trend-host" id="complaintTrendHost">
+            <canvas id="complaintLineTrend" height="220"></canvas>
+          </div>
         </div>
       </div>
       <div class="complaints-table-tools" id="complaintsTableTools">
@@ -1331,11 +1386,11 @@ td.num, th.num {
         </label>
       </div>
       <div class="complaints-toolbar complaints-toolbar-table" id="complaintsToolbarTable">
-        <div class="field">
+        <div class="field field-complaint-room">
           <label class="f" id="lblComplaintRoomTable" for="complaintRoomFilterTable">房號</label>
           <select id="complaintRoomFilterTable"></select>
         </div>
-        <div class="field">
+        <div class="field field-complaint-subject">
           <label class="f" id="lblComplaintSubjectTable" for="complaintSubjectFilterTable">主題</label>
           <select id="complaintSubjectFilterTable"></select>
         </div>
@@ -1502,13 +1557,13 @@ td.num, th.num {
         weekday: "星期", 
         date: "日期", 
         year: "年份", 
-        month: "月份", 
+        month: "月", 
         total: "總收入", 
         sum: "合計", 
         roomSold: "已售", 
         rna: "可售", 
         rno: "預售",
-        occ: "住房率%", 
+        occ: "住房率", 
         arr: "平均房價"
       },
       complaints: {
@@ -1531,7 +1586,7 @@ td.num, th.num {
         colResult: "結果",
         colProgress: "進度",
         meta: (n, real) => `本表 ${n} 列（實際客訴 ${real} 筆）`,
-        warn: (rooms, th) => `以下房號在本期間實際客訴 ≥ ${th} 次，建議複查是否為反覆故障（例如冷媒常補仍不冷）：${rooms}`,
+        warn: (rooms, th) => `以下房號在本期間實際客訴 ≥ ${th} 次，建議複查是否為反覆故障：${rooms}`,
         empty: "尚無客訴資料。請確認試算表已有「Complaints」分頁，且 Apps Script 已部署為合併回傳 complaints。",
         noSlice: "（無實際客訴可統計）",
         sectionTitle: "客訴與維修紀錄",
@@ -1540,6 +1595,8 @@ td.num, th.num {
       },
       weekdays: ['週日','週一','週二','週三','週四','週五','週六'],
       months: m => `${m}月`,
+      /* 業績明細表格「月」欄：只顯示數字，與期間／圖表用的 months 分開 */
+      monthsTable: m => String(m),
       currencyOpts: [
         { val:"IDR", text:"IDR" },
         { val:"TWD", text:"TWD" },
@@ -2181,6 +2238,13 @@ function updateLangUI(){
     return LANGS[currentLang].months(m); 
   }
 
+  /** 表格與圖表 X 軸：中文月份僅數字；其他語系沿用 monthLabel */
+  function tableMonthLabel(m) {
+    const L = LANGS[currentLang];
+    if (typeof L.monthsTable === "function") return L.monthsTable(m);
+    return monthLabel(m);
+  }
+
   // 判斷模式（單一曆月＝日明細；否則為月匯總）
   function currentMode() {
     const rb = getRangeBounds();
@@ -2268,9 +2332,9 @@ function updateLangUI(){
       const distinctY = new Set(groups.map(g => g.y));
       const showY = distinctY.size > 1;
       labels = groups.map(g => {
-        if (!showY) return monthLabel(g.m);
+        if (!showY) return tableMonthLabel(g.m);
         const yy = String(g.y).slice(-2);
-        return `${yy}/${monthLabel(g.m)}`;
+        return `${yy}/${tableMonthLabel(g.m)}`;
       });
     }
 
@@ -2583,18 +2647,22 @@ function updateLangUI(){
 
   /** 每一列房號：Y 軸文字與該列橫向長條共用同一垂直中心（適用任意列數） */
   function alignComplaintYLabelsToBarCenter(chart) {
-    if (!chart || !chart.canvas || chart.canvas.id !== "complaintBarRooms") return;
-    var opt = chart.options;
-    if (!opt || opt.indexAxis !== "y") return;
-    var sc = chart.scales.y;
-    if (!sc || !sc.ticks || !sc.ticks.length) return;
-    var items = sc.labelItems;
-    if (!items || !items.length) return;
-    var tickCount = sc.ticks.length;
-    var n = Math.min(items.length, tickCount);
-    for (var i = 0; i < n; i++) {
-      items[i].textBaseline = "middle";
-      items[i].y = sc.getPixelForTick(i);
+    try {
+      if (!chart || !chart.canvas || chart.canvas.id !== "complaintBarRooms") return;
+      var opt = chart.options;
+      if (!opt || opt.indexAxis !== "y") return;
+      var sc = chart.scales.y;
+      if (!sc || !sc.ticks || !sc.ticks.length) return;
+      var items = sc.labelItems;
+      if (!items || !items.length) return;
+      var tickCount = sc.ticks.length;
+      var n = Math.min(items.length, tickCount);
+      for (var i = 0; i < n; i++) {
+        items[i].textBaseline = "middle";
+        items[i].y = sc.getPixelForTick(i);
+      }
+    } catch (e) {
+      /* 部分行動版 Chart 版本／時序下 labelItems 可能尚未就緒，避免整張客訴圖表無法繪製 */
     }
   }
 
@@ -3146,15 +3214,13 @@ function updateLangUI(){
     const trendCanvas = document.getElementById("complaintLineTrend");
     if (trendCanvas) {
       if (monthKeys.length) {
-        const Lm = LANGS[currentLang];
-        const monthLab = Lm.months ? Lm.months.bind(Lm) : function (m) { return String(m); };
         const distinctY = new Set(monthKeys.map(function (k) { return Math.floor(k / 100); }));
         const showY = distinctY.size > 1;
         const trendLabels = monthKeys.map(function (k) {
           const y = Math.floor(k / 100);
           const m = k % 100;
-          if (!showY) return monthLab(m);
-          return String(y).slice(-2) + "/" + monthLab(m);
+          if (!showY) return tableMonthLabel(m);
+          return String(y).slice(-2) + "/" + tableMonthLabel(m);
         });
         const otherLabelTr = C.barOtherSubjects || "Other";
         const trendDatasets = [];
@@ -3236,6 +3302,20 @@ function updateLangUI(){
           });
         }
         const trendLegendOn = trendDatasets.length > 1;
+        var trendAspect = trendLegendOn ? 1.05 : 1.35;
+        var trendMobile =
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(max-width: 768px)").matches;
+        var trendHost = document.getElementById("complaintTrendHost");
+        if (trendMobile && trendHost) {
+          var tw = trendHost.getBoundingClientRect().width || trendHost.clientWidth;
+          if (!tw || tw < 40) {
+            tw = Math.min(typeof window.innerWidth === "number" ? window.innerWidth - 48 : 320, 360);
+          }
+          trendHost.style.height = Math.round(Math.max(200, tw / trendAspect)) + "px";
+        } else if (trendHost) {
+          trendHost.style.height = "";
+        }
         complaintTrendChart = new Chart(trendCanvas, {
           type: "line",
           data: {
@@ -3244,8 +3324,8 @@ function updateLangUI(){
           },
           options: {
             responsive: true,
-            maintainAspectRatio: true,
-            aspectRatio: trendLegendOn ? 1.05 : 1.35,
+            maintainAspectRatio: !trendMobile,
+            aspectRatio: trendAspect,
             plugins: {
               legend: {
                 display: trendLegendOn,
@@ -3291,10 +3371,48 @@ function updateLangUI(){
           }
         });
       } else {
+        var trendHostClear = document.getElementById("complaintTrendHost");
+        if (trendHostClear) trendHostClear.style.height = "";
         const ctx = trendCanvas.getContext("2d");
         if (ctx) ctx.clearRect(0, 0, trendCanvas.width, trendCanvas.height);
       }
     }
+
+    /* 手機版面／網址列伸縮後，Chart 有時首次量到寬高為 0；延遲 resize 可補救客訴圖空白 */
+    (function complaintChartsResizeSoon() {
+      function doResize() {
+        try {
+          if (complaintBarChart) complaintBarChart.resize();
+        } catch (e) {}
+        try {
+          if (
+            complaintTrendChart &&
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(max-width: 768px)").matches
+          ) {
+            var thR = document.getElementById("complaintTrendHost");
+            var opt = complaintTrendChart.options;
+            var ar = opt && typeof opt.aspectRatio === "number" ? opt.aspectRatio : 1.15;
+            if (thR && ar > 0) {
+              var twR = thR.getBoundingClientRect().width || thR.clientWidth;
+              if (twR >= 40) {
+                thR.style.height = Math.round(Math.max(200, twR / ar)) + "px";
+              }
+            }
+          }
+          if (complaintTrendChart) complaintTrendChart.resize();
+        } catch (e) {}
+      }
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(function () {
+          doResize();
+          requestAnimationFrame(doResize);
+        });
+      } else {
+        setTimeout(doResize, 0);
+        setTimeout(doResize, 100);
+      }
+    })();
 
     theadC.innerHTML = "";
     tbodyC.innerHTML = "";
@@ -3557,7 +3675,7 @@ function updateLangUI(){
 
         // 年 / 月
         addTd(tr, g.Year,             { num:false, extra:false });
-        addTd(tr, monthLabel(g.Month),{ num:false, extra:false });
+        addTd(tr, tableMonthLabel(g.Month),{ num:false, extra:false });
 
         // 房務 / 其他收入
         let rowTotal = 0;

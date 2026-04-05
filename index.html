@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HOTEL_PDv45</title>
 
-  <!-- 引入 Chart.js (繪製圖表用) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+  <!-- Chart.js 3.9；長條數字改自寫 plugin，不再用 chartjs-plugin-datalabels（file://／resize 易觸發 _listened／_labels 錯誤） -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 
   <style>
     /* 全域字型與頁面設定 */
@@ -2456,8 +2455,7 @@ function updateLangUI(){
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
     /*
-     * 勿在此註冊 ChartDataLabels：若在 new trendChart 之前註冊，易干擾營收多軸折線圖。
-     * 改為僅在「建立客訴長條圖」前註冊（見 mountComplaintBarChart；手機／桌機皆同）。
+     * 客訴長條圖數字標籤使用自寫 afterDatasetsDraw plugin，不依賴 chartjs-plugin-datalabels。
      */
 
     // 桌機/手機不同刻度數（桌機=10、手機=8）
@@ -2503,8 +2501,7 @@ function updateLangUI(){
             display: true,
             text: "Y-axis多軸：L=Total/Room、R=Others...",
             align: "start"
-          },
-          datalabels: { display: false }
+          }
         },
         scales:{
           yLeft: { 
@@ -2647,8 +2644,7 @@ function updateLangUI(){
           legend:{ 
             position:"right", 
             labels:{ boxWidth:12, font:{size:12}, padding: 8 } 
-          },
-          datalabels: { display: false }
+          }
         } 
       }
     });
@@ -2672,6 +2668,7 @@ function updateLangUI(){
     "#22d3ee", "#c084fc", "#fb7185", "#4ade80", "#facc15", "#94a3b8"
   ];
   let complaintBarChart, complaintTrendChart;
+  let complaintBarMountGen = 0;
 
   function complaintTruncLegend(s, maxLen) {
     s = String(s);
@@ -3097,9 +3094,12 @@ function updateLangUI(){
           barRowPx = Math.max(3, Math.floor((barHostH - barLegendPx - barChrome) / Math.max(1, nRooms)));
         }
       } else {
-        /* 手機：每列至少約 18px（房號／長條較好讀）；總高可超過螢幕，靠 .complaint-bar-viewport 捲動 */
+        /* 手機：房號少時每列加高（房號／數字標籤較不擠）；房號多時維持可捲動 */
         var readableMinRow = 18;
-        var innerTarget = Math.max(nRooms * readableMinRow, 288);
+        var innerTarget =
+          nRooms <= 16
+            ? nRooms * 30
+            : Math.max(nRooms * readableMinRow, 288);
         barRowPx = Math.floor(innerTarget / Math.max(1, nRooms));
         barRowPx = Math.min(barMaxRow, Math.max(readableMinRow, barRowPx));
         barHostH = Math.round(nRooms * barRowPx + barLegendPx + barChrome);
@@ -3179,13 +3179,65 @@ function updateLangUI(){
           ? function (t) { return "Jumlah: " + t; }
           : function (t) { return "Total: " + t; };
 
+      var complaintBarSegmentLabelsPlugin = {
+        id: "complaintBarSegmentLabels",
+        afterDatasetsDraw: function (chart) {
+          try {
+            var ctx = chart.ctx;
+            if (!ctx) return;
+            var fontPx = barDesktop
+              ? barRowPx < 22 ? 10 : 12
+              : Math.max(7, Math.min(10, Math.round(barRowPx * 0.5)));
+            ctx.save();
+            ctx.font = "800 " + fontPx + "px system-ui,Segoe UI,sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            var dLen = chart.data.datasets.length;
+            for (var di = 0; di < dLen; di++) {
+              var meta = chart.getDatasetMeta(di);
+              if (!meta || meta.hidden) continue;
+              var ds = chart.data.datasets[di];
+              if (!ds || !meta.data) continue;
+              for (var i = 0; i < meta.data.length; i++) {
+                var bar = meta.data[i];
+                if (!bar || bar.skip) continue;
+                var v = Number(ds.data[i]);
+                if (!(v > 0) || isNaN(v)) continue;
+                var props = bar.getProps(["x", "y", "base", "horizontal"], true);
+                if (props.horizontal !== true) continue;
+                var cx = (props.x + props.base) / 2;
+                var cy = props.y;
+                var segW = Math.abs(props.x - props.base);
+                if (segW < 8) continue;
+                if (segW < 14 && v < 2) continue;
+                var txt = String(Math.round(v));
+                ctx.fillStyle = "#0f172a";
+                ctx.strokeStyle = "rgba(255,255,255,0.35)";
+                ctx.lineWidth = 2;
+                ctx.strokeText(txt, cx, cy);
+                ctx.fillText(txt, cx, cy);
+              }
+            }
+            ctx.restore();
+          } catch (eSegLbl) {}
+        }
+      };
+
       function mountComplaintBarChart() {
-        if (typeof ChartDataLabels !== "undefined" && !window._complaintDataLabelsRegistered) {
-          Chart.register(ChartDataLabels);
-          window._complaintDataLabelsRegistered = true;
+        try {
+          var attached =
+            typeof Chart.getChart === "function" ? Chart.getChart(barCanvas) : null;
+          if (attached) attached.destroy();
+        } catch (eBarGc) {}
+        if (complaintBarChart) {
+          try {
+            complaintBarChart.destroy();
+          } catch (eBarDes) {}
+          complaintBarChart = null;
         }
         complaintBarChart = new Chart(barCanvas, {
           type: "bar",
+          plugins: [complaintBarSegmentLabelsPlugin],
           data: {
             labels: chartRoomLabels,
             datasets: datasets
@@ -3251,25 +3303,6 @@ function updateLangUI(){
                     return barTooltipTotal(t);
                   }
                 }
-              },
-              datalabels: {
-                display: function (ctx) {
-                  const v = ctx.dataset.data[ctx.dataIndex];
-                  return v != null && Number(v) > 0;
-                },
-                color: "#0f172a",
-                font: {
-                  size: barDesktop
-                    ? barRowPx < 22 ? 10 : 12
-                    : Math.max(7, Math.min(10, Math.round(barRowPx * 0.5))),
-                  weight: "800"
-                },
-                formatter: function (v) {
-                  return Number(v) >= 1 ? String(Math.round(Number(v))) : "";
-                },
-                clamp: true,
-                textStrokeColor: "rgba(255,255,255,0.35)",
-                textStrokeWidth: 2
               }
             },
             scales: {
@@ -3298,10 +3331,18 @@ function updateLangUI(){
           }
         });
         if (!barDesktop && complaintBarChart) {
+          var barChartRef = complaintBarChart;
           [0, 80, 250, 500].forEach(function (ms) {
             setTimeout(function () {
               try {
-                complaintBarChart.resize();
+                if (
+                  barChartRef &&
+                  barChartRef === complaintBarChart &&
+                  barChartRef.canvas &&
+                  barChartRef.canvas.isConnected
+                ) {
+                  barChartRef.resize();
+                }
               } catch (e2) {}
             }, ms);
           });
@@ -3321,13 +3362,21 @@ function updateLangUI(){
           void barHost.offsetWidth;
         }
         if (typeof requestAnimationFrame === "function") {
+          complaintBarMountGen += 1;
+          var barMountGen = complaintBarMountGen;
           requestAnimationFrame(function () {
             requestAnimationFrame(function () {
+              if (barMountGen !== complaintBarMountGen) return;
               mountComplaintBarChart();
             });
           });
         } else {
-          setTimeout(mountComplaintBarChart, 0);
+          complaintBarMountGen += 1;
+          var barMountGenT = complaintBarMountGen;
+          setTimeout(function () {
+            if (barMountGenT !== complaintBarMountGen) return;
+            mountComplaintBarChart();
+          }, 0);
         }
       } else {
         mountComplaintBarChart();
@@ -3483,8 +3532,7 @@ function updateLangUI(){
                     return lab ? lab + ": " + v : String(v);
                   }
                 }
-              },
-              datalabels: { display: false }
+              }
             },
             scales: {
               y: {
@@ -4260,9 +4308,9 @@ function updateLangUI(){
     &nbsp;&nbsp;&nbsp;• 若 API 錯誤或網路異常，系統會保留上次成功的匯率<br/>
     <br/>
     3. 客訴資料：<br/>
-    &nbsp;&nbsp;&nbsp;•與上方「期間」篩選一致。
-    &nbsp;&nbsp;&nbsp;•可依房號查看歷史
-    &nbsp;&nbsp;&nbsp;•左圖為橫向堆疊長條（左側房號、顏色＝主題）
+    &nbsp;&nbsp;&nbsp;•與上方「期間」篩選一致。<br/>
+    &nbsp;&nbsp;&nbsp;•可依房號查看歷史<br/>
+    &nbsp;&nbsp;&nbsp;•左圖為橫向堆疊長條（左側房號、顏色＝主題）<br/>
     &nbsp;&nbsp;&nbsp;•右為所選期間內每月實際客訴趨勢。<br/>
   </div>
 

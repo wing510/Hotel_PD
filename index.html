@@ -1111,7 +1111,23 @@ td.num, th.num {
   display: block;
   max-width: 100%;
 }
-/* 橫向堆疊長條：高度由 JS 依房數設定（避免房多時被壓成細線） */
+/* 手機：外層限高 + 直向捲動，內層 canvas 可依房數變高，列才不會被壓成 1px */
+.complaint-bar-viewport {
+  width: 100%;
+  box-sizing: border-box;
+}
+@media (max-width: 768px) {
+  .complaint-bar-viewport {
+    max-height: min(54vh, 520px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+    border: 1px solid rgba(148,163,184,0.28);
+    background: rgba(2,6,23,0.4);
+  }
+}
+/* 橫向堆疊長條：高度由 JS 依房數設定 */
 .complaint-bar-host {
   width: 100%;
   position: relative;
@@ -1185,7 +1201,7 @@ td.num, th.num {
     order: -1;
   }
   .complaint-bar-host {
-    min-height: 180px;
+    min-height: 160px;
   }
   .complaints-charts .compl-chart-card.complaint-bar-card {
     padding: 8px 10px;
@@ -1374,8 +1390,10 @@ td.num, th.num {
       <div class="complaints-charts" id="complaintsChartsRow">
         <div class="compl-chart-card complaint-bar-card" id="complaintBarCard">
           <h3 id="titleComplaintByRoom"></h3>
-          <div class="complaint-bar-host" id="complaintBarHost">
-            <canvas id="complaintBarRooms" height="260"></canvas>
+          <div class="complaint-bar-viewport" id="complaintBarViewport">
+            <div class="complaint-bar-host" id="complaintBarHost">
+              <canvas id="complaintBarRooms" height="260"></canvas>
+            </div>
           </div>
         </div>
         <div class="compl-chart-card complaint-line-card">
@@ -2437,11 +2455,10 @@ function updateLangUI(){
     // 先判斷是否為手機寬度（更準）
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
-    /* 手機不註冊 datalabels 外掛：與客訴橫向 bar 併用時 Android 常整張不繪製 */
-    if (!isMobile && typeof ChartDataLabels !== "undefined" && !window._complaintDataLabelsRegistered) {
-      Chart.register(ChartDataLabels);
-      window._complaintDataLabelsRegistered = true;
-    }
+    /*
+     * 勿在此註冊 ChartDataLabels：若在 new trendChart 之前註冊，易干擾營收多軸折線圖。
+     * 改為僅在「桌機、建立客訴長條圖」前註冊（見 mountComplaintBarChart）。
+     */
 
     // 桌機/手機不同刻度數（桌機=10、手機=8）
     const TICK_LIMIT = isMobile ? 8 : 10;
@@ -2473,11 +2490,12 @@ function updateLangUI(){
               label: function(ctx){
                 const ds = ctx.dataset;
                 const val = ctx.parsed.y;
-                // 住房率%（右側 % 軸）
                 if (ds.yAxisID === 'yPercent') {
                   const xLabel = ctx.chart.data.labels[ctx.dataIndex] || '';
                   return `${xLabel} ${Number(val).toFixed(2)}%`;
                 }
+                const lab = ds.label != null ? String(ds.label) : "";
+                return lab ? lab + ": " + val : String(val);
               }
             }
           },
@@ -3044,35 +3062,43 @@ function updateLangUI(){
       var barDesktop =
         typeof window.matchMedia === "function" &&
         window.matchMedia("(min-width: 769px)").matches;
-      var barLegendPx = barDesktop ? 96 : 118;
-      var barChrome = barDesktop ? 18 : 22;
-      var barMinRow = barDesktop ? 11 : 12;
-      var barMaxRow = 48;
-      /*
-       * 先前邏輯：先壓低 barHostH，再強制每列至少 12px 回算高度 →「全部房號」時高度可達數千 px。
-       * Android canvas 過高常無法繪製（整片白）。手機改為先訂上限，房間多時允許列高 < 12。
-       */
-      var barHostCap = barDesktop
-        ? 12000
-        : Math.min(
-            2000,
-            Math.max(380, Math.floor((typeof window.innerHeight === "number" ? window.innerHeight : 640) * 2.5))
-          );
-      var innerBudget = barHostCap - barLegendPx - barChrome;
-      if (innerBudget < 60) innerBudget = 60;
-      var barRowPx = Math.floor(innerBudget / Math.max(1, nRooms));
-      barRowPx = Math.min(barMaxRow, barRowPx);
-      if (barRowPx < barMinRow) {
-        if (!barDesktop && nRooms * barMinRow > innerBudget) {
-          barRowPx = Math.max(3, Math.floor(innerBudget / Math.max(1, nRooms)));
-        } else {
-          barRowPx = barMinRow;
+      var barLegendPx = 88;
+      var barChrome = barDesktop ? 16 : 14;
+      var barMaxRow = barDesktop ? 34 : 36;
+      var barRowPx;
+      var barHostH;
+      if (barDesktop) {
+        var barMinRowD = 10;
+        var barVh = typeof window.innerHeight === "number" ? window.innerHeight : 640;
+        var barHostCap = Math.min(560, Math.max(280, Math.floor(barVh * 0.58)));
+        var innerBudget = barHostCap - barLegendPx - barChrome;
+        if (innerBudget < 60) innerBudget = 60;
+        barRowPx = Math.floor(innerBudget / Math.max(1, nRooms));
+        barRowPx = Math.min(barMaxRow, barRowPx);
+        if (barRowPx < barMinRowD) {
+          if (nRooms * barMinRowD > innerBudget) {
+            barRowPx = Math.max(3, Math.floor(innerBudget / Math.max(1, nRooms)));
+          } else {
+            barRowPx = barMinRowD;
+          }
         }
-      }
-      var barHostH = Math.round(nRooms * barRowPx + barLegendPx + barChrome);
-      if (!barDesktop && barHostH > barHostCap) {
-        barHostH = barHostCap;
-        barRowPx = Math.max(3, Math.floor((barHostH - barLegendPx - barChrome) / Math.max(1, nRooms)));
+        barHostH = Math.round(nRooms * barRowPx + barLegendPx + barChrome);
+        if (barHostH > barHostCap) {
+          barHostH = barHostCap;
+          barRowPx = Math.max(3, Math.floor((barHostH - barLegendPx - barChrome) / Math.max(1, nRooms)));
+        }
+      } else {
+        /* 手機：每列至少約 15px 才看得見；總高可超過螢幕，靠 .complaint-bar-viewport 捲動 */
+        var readableMinRow = 15;
+        var innerTarget = Math.max(nRooms * readableMinRow, 260);
+        barRowPx = Math.floor(innerTarget / Math.max(1, nRooms));
+        barRowPx = Math.min(barMaxRow, Math.max(readableMinRow, barRowPx));
+        barHostH = Math.round(nRooms * barRowPx + barLegendPx + barChrome);
+        var barMobileCanvasCap = 3200;
+        if (barHostH > barMobileCanvasCap) {
+          barHostH = barMobileCanvasCap;
+          barRowPx = Math.max(8, Math.floor((barHostH - barLegendPx - barChrome) / Math.max(1, nRooms)));
+        }
       }
       var barYTick = barRowPx < 14 ? 8 : barRowPx < 20 ? 9 : barRowPx < 26 ? 10 : 11;
       if (barHost) {
@@ -3082,6 +3108,8 @@ function updateLangUI(){
         if (!barDesktop) {
           barHost.style.width = "100%";
           void barHost.offsetWidth;
+          var barVp = document.getElementById("complaintBarViewport");
+          if (barVp) barVp.scrollTop = 0;
         }
       }
       var barThicknessPx = Math.max(2, Math.min(barMaxRow, Math.round(barRowPx)));
@@ -3138,126 +3166,159 @@ function updateLangUI(){
           ? function (t) { return "Jumlah: " + t; }
           : function (t) { return "Total: " + t; };
 
-      complaintBarChart = new Chart(barCanvas, {
-        type: "bar",
-        data: {
-          labels: chartRoomLabels,
-          datasets: datasets
-        },
-        options: {
-          indexAxis: "y",
-          responsive: true,
-          maintainAspectRatio: false,
-          devicePixelRatio: barDesktop ? (typeof window.devicePixelRatio === "number" ? window.devicePixelRatio : 1) : 1,
-          layout: {
-            padding: { bottom: 2, top: 0, left: 0, right: barDesktop ? 8 : 10 }
+      function mountComplaintBarChart() {
+        if (barDesktop && typeof ChartDataLabels !== "undefined" && !window._complaintDataLabelsRegistered) {
+          Chart.register(ChartDataLabels);
+          window._complaintDataLabelsRegistered = true;
+        }
+        complaintBarChart = new Chart(barCanvas, {
+          type: "bar",
+          data: {
+            labels: chartRoomLabels,
+            datasets: datasets
           },
-          datasets: {
-            bar: {
-              categoryPercentage: 1,
-              barPercentage: 1
-            }
-          },
-          plugins: {
-            legend: {
-              display: true,
-              position: "bottom",
-              align: "center",
-              maxHeight: barDesktop ? 64 : 92,
-              labels: {
-                boxWidth: 10,
-                boxHeight: 10,
-                font: { size: barDesktop ? 9 : 10, weight: "500", family: "system-ui,Segoe UI,sans-serif" },
-                color: "#f8fafc",
-                padding: barDesktop ? 4 : 7,
-                usePointStyle: true,
-                pointStyle: "rect",
-                generateLabels: function (chart) {
-                  return chart.data.datasets.map(function (dataset, i) {
-                    const txt = complaintTruncLegend(dataset.label, 48);
-                    return {
-                      text: txt || "(—)",
-                      fillStyle: dataset.backgroundColor,
-                      strokeStyle: dataset.backgroundColor,
-                      lineWidth: 0,
-                      fontColor: "#f8fafc",
-                      hidden: !chart.isDatasetVisible(i),
-                      datasetIndex: i,
-                      index: i
-                    };
-                  });
-                }
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            devicePixelRatio: barDesktop ? (typeof window.devicePixelRatio === "number" ? window.devicePixelRatio : 1) : 1,
+            layout: {
+              padding: { bottom: 2, top: 0, left: 0, right: barDesktop ? 8 : 10 }
+            },
+            datasets: {
+              bar: {
+                categoryPercentage: 1,
+                barPercentage: 1
               }
             },
-            tooltip: {
-              callbacks: {
-                label: function (ctx) {
-                  var px = ctx.parsed && ctx.parsed.x;
-                  var v = px != null && !isNaN(px) ? px : ctx.raw;
-                  return String(ctx.dataset.label) + ": " + v;
+            plugins: {
+              legend: {
+                display: true,
+                position: "bottom",
+                align: "center",
+                maxHeight: barDesktop ? 58 : 68,
+                labels: {
+                  boxWidth: 10,
+                  boxHeight: 10,
+                  font: { size: barDesktop ? 9 : 10, weight: "500", family: "system-ui,Segoe UI,sans-serif" },
+                  color: "#f8fafc",
+                  padding: barDesktop ? 4 : 7,
+                  usePointStyle: true,
+                  pointStyle: "rect",
+                  generateLabels: function (chart) {
+                    return chart.data.datasets.map(function (dataset, i) {
+                      const txt = complaintTruncLegend(dataset.label, 48);
+                      return {
+                        text: txt || "(—)",
+                        fillStyle: dataset.backgroundColor,
+                        strokeStyle: dataset.backgroundColor,
+                        lineWidth: 0,
+                        fontColor: "#f8fafc",
+                        hidden: !chart.isDatasetVisible(i),
+                        datasetIndex: i,
+                        index: i
+                      };
+                    });
+                  }
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function (ctx) {
+                    var px = ctx.parsed && ctx.parsed.x;
+                    var v = px != null && !isNaN(px) ? px : ctx.raw;
+                    return String(ctx.dataset.label) + ": " + v;
+                  },
+                  footer: function (items) {
+                    if (!items.length) return "";
+                    let t = 0;
+                    for (let fi = 0; fi < items.length; fi++) {
+                      t += Number(items[fi].parsed.x) || 0;
+                    }
+                    return barTooltipTotal(t);
+                  }
+                }
+              },
+              datalabels: {
+                display: barDesktop
+                  ? function (ctx) {
+                      const v = ctx.dataset.data[ctx.dataIndex];
+                      return v != null && Number(v) > 0;
+                    }
+                  : false,
+                color: "#0f172a",
+                font: { size: barRowPx < 22 ? 10 : 12, weight: "800" },
+                formatter: function (v) {
+                  return Number(v) >= 1 ? String(Math.round(Number(v))) : "";
                 },
-                footer: function (items) {
-                  if (!items.length) return "";
-                  let t = 0;
-                  for (let fi = 0; fi < items.length; fi++) {
-                    t += Number(items[fi].parsed.x) || 0;
-                  }
-                  return barTooltipTotal(t);
-                }
+                clamp: true,
+                textStrokeColor: "rgba(255,255,255,0.35)",
+                textStrokeWidth: 2
               }
             },
-            datalabels: {
-              display: barDesktop
-                ? function (ctx) {
-                    const v = ctx.dataset.data[ctx.dataIndex];
-                    return v != null && Number(v) > 0;
-                  }
-                : false,
-              color: "#0f172a",
-              font: { size: barRowPx < 22 ? 10 : 12, weight: "800" },
-              formatter: function (v) {
-                return Number(v) >= 1 ? String(Math.round(Number(v))) : "";
+            scales: {
+              x: {
+                stacked: true,
+                beginAtZero: true,
+                ticks: {
+                  color: tickColor,
+                  precision: 0,
+                  stepSize: 1,
+                  font: { size: barDesktop ? 11 : 9 }
+                },
+                grid: { color: "rgba(148,163,184,0.2)", lineWidth: 1 }
               },
-              clamp: true,
-              textStrokeColor: "rgba(255,255,255,0.35)",
-              textStrokeWidth: 2
-            }
-          },
-          scales: {
-            x: {
-              stacked: true,
-              beginAtZero: true,
-              ticks: {
-                color: tickColor,
-                precision: 0,
-                stepSize: 1,
-                font: { size: barDesktop ? 11 : 9 }
-              },
-              grid: { color: "rgba(148,163,184,0.2)", lineWidth: 1 }
-            },
-            y: {
-              stacked: false,
-              ticks: {
-                color: "#f1f5f9",
-                font: { size: barDesktop ? barYTick : Math.min(barYTick, 10), weight: "600" },
-                autoSkip: false,
-                padding: 4
-              },
-              grid: { display: false }
+              y: {
+                stacked: false,
+                ticks: {
+                  color: "#f1f5f9",
+                  font: { size: barDesktop ? barYTick : Math.min(barYTick, 10), weight: "600" },
+                  autoSkip: false,
+                  padding: 4
+                },
+                grid: { display: false }
+              }
             }
           }
-        }
-      });
-      if (!barDesktop && complaintBarChart) {
-        [0, 80, 250].forEach(function (ms) {
-          setTimeout(function () {
-            try {
-              complaintBarChart.resize();
-            } catch (e2) {}
-          }, ms);
         });
+        if (!barDesktop && complaintBarChart) {
+          [0, 80, 250, 500].forEach(function (ms) {
+            setTimeout(function () {
+              try {
+                complaintBarChart.resize();
+              } catch (e2) {}
+            }, ms);
+          });
+        }
+      }
+
+      /* 手機常見：首次 render 時 flex 尚未結束，容器寬度=0 → Chart 不畫。延遲建立 + 後備 minWidth（GPT 建議與實作一致） */
+      if (!barDesktop && barHost) {
+        var barCardEl = document.getElementById("complaintBarCard");
+        var bw = barHost.getBoundingClientRect().width;
+        if (bw < 48 && barCardEl) {
+          bw = barCardEl.getBoundingClientRect().width;
+        }
+        if (bw < 48) {
+          var vw = typeof window.innerWidth === "number" ? window.innerWidth : 360;
+          barHost.style.minWidth = Math.max(260, vw - 32) + "px";
+          void barHost.offsetWidth;
+        }
+        if (typeof requestAnimationFrame === "function") {
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              mountComplaintBarChart();
+            });
+          });
+        } else {
+          setTimeout(mountComplaintBarChart, 0);
+        }
+      } else {
+        mountComplaintBarChart();
       }
     } else if (barCanvas && complaintBarChart === null) {
+      var barVpClear = document.getElementById("complaintBarViewport");
+      if (barVpClear) barVpClear.scrollTop = 0;
       var barHostClear = document.getElementById("complaintBarHost");
       if (barHostClear) {
         barHostClear.style.height = "";

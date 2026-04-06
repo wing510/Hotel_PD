@@ -1121,6 +1121,29 @@ td.num, th.num {
   accent-color: #38bdf8;
   cursor: pointer;
 }
+.complaints-table-tools .search {
+  flex: 1 1 240px;
+  min-width: 200px;
+  max-width: 520px;
+}
+.complaints-table-tools .search input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(148,163,184,0.45);
+  background: rgba(2,6,23,0.65);
+  color: #e5e7eb;
+  outline: none;
+}
+.complaints-table-tools .search input::placeholder {
+  color: rgba(148,163,184,0.95);
+}
+.complaints-table-tools .search input:focus {
+  border-color: rgba(56,189,248,0.75);
+  box-shadow: 0 0 0 3px rgba(56,189,248,0.18);
+}
 .complaints-warn {
   font-size: 12px;
   color: #fcd34d;
@@ -1254,6 +1277,108 @@ td.num, th.num {
 #complaintsTable {
   margin-top: 0;
 }
+#complaintsTable th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+#complaintsTable th.sortable .si {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  color: #94a3b8;
+  opacity: 0.95;
+}
+#complaintsTable th.sortable.active .si {
+  color: #38bdf8;
+}
+
+#dataTable th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+#dataTable th.sortable .si {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  color: #94a3b8;
+  opacity: 0.95;
+}
+#dataTable th.sortable.active .si {
+  color: #38bdf8;
+}
+
+/* 期間同樣風格：客訴區間面板 */
+.dropdown-content.complaint-filter-panel {
+  max-height: min(70vh, 360px);
+  min-width: 260px;
+  right: auto;
+  padding: 10px 10px 12px;
+}
+.complaint-filter-panel .period-h {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.complaint-filter-panel .complaint-range-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+.complaint-filter-panel .complaint-range-row input {
+  color: #e5e7eb;
+  background: #0f172a;
+  border: 1px solid rgba(148,163,184,0.5);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.complaint-filter-panel .complaint-range-row input:focus {
+  outline: none;
+  border-color: rgba(56,189,248,0.75);
+  box-shadow: 0 0 0 3px rgba(56,189,248,0.18);
+}
+.complaint-filter-panel .complaint-clear-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.complaint-filter-panel .complaint-clear {
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.55);
+  background: transparent;
+  color: #e5e7eb;
+  cursor: pointer;
+}
+.complaint-filter-panel .complaint-clear:hover {
+  background: rgba(148,163,184,0.12);
+}
+@media (max-width: 768px) {
+  .dropdown-content.complaint-filter-panel {
+    /* 手機版：面板不要超出側邊欄（多組手機 CSS 互相覆蓋，這裡用 !important 定錨） */
+    min-width: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  /* 進一步保險：下拉內容不要突破側邊欄內距 */
+  .filters .dropdown .dropdown-content.complaint-filter-panel {
+    max-width: calc(100% - 0px) !important;
+  }
+  .complaint-filter-panel .complaint-range-row {
+    /* 手機仍維持左右並排 */
+    grid-template-columns: 1fr 1fr;
+  }
+}
 @media (max-width: 768px) {
   .complaints-charts {
     flex-direction: column;
@@ -1355,10 +1480,42 @@ td.num, th.num {
           </div>
         </div>
 
+        <!-- 客訴篩選：像「期間」一樣點開面板 -->
+        <div class="card">
+          <label id="lblComplaintFilter" for="complaintFilterBtn"></label>
+          <div class="dropdown" id="complaintFilterDropdown">
+            <button id="complaintFilterBtn" type="button">—</button>
+            <div id="complaintFilterPanel" class="dropdown-content complaint-filter-panel">
+              <div class="period-section">
+                <div class="period-h" id="lblComplaintRoomRange"></div>
+                <div class="complaint-range-row">
+                  <input id="complaintRoomMin" inputmode="numeric" autocomplete="off" />
+                  <input id="complaintRoomMax" inputmode="numeric" autocomplete="off" />
+                </div>
+              </div>
+              <div class="period-divider"></div>
+              <div class="period-section">
+                <div class="period-h" id="lblComplaintCountRange"></div>
+                <div class="complaint-range-row">
+                  <input id="complaintCountMin" type="number" min="0" step="1" inputmode="numeric" autocomplete="off" />
+                  <input id="complaintCountMax" type="number" min="0" step="1" inputmode="numeric" autocomplete="off" />
+                </div>
+              </div>
+              <div class="complaint-clear-row">
+                <button type="button" class="complaint-clear" id="complaintFilterClear"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 貨幣選單 -->
         <div class="card">
-          <label id="lblCurrency" for="currencySel">貨幣</label>
-          <select id="currencySel"></select>
+          <label id="lblCurrency" for="currencyBtn">貨幣</label>
+          <div class="dropdown" id="currencyDropdown">
+            <button id="currencyBtn" type="button">—</button>
+            <div id="currencyList" class="dropdown-content"></div>
+          </div>
+          <select id="currencySel" hidden></select>
         </div>
 
         <!-- 收入選單（改成自訂下拉 + checkbox 清單） -->
@@ -1381,8 +1538,12 @@ td.num, th.num {
 
         <!-- 語言選單 -->
         <div class="card">
-          <label id="lblLang" for="langSel">語言</label>
-          <select id="langSel">
+          <label id="lblLang" for="langBtn">語言</label>
+          <div class="dropdown" id="langDropdown">
+            <button id="langBtn" type="button">—</button>
+            <div id="langList" class="dropdown-content"></div>
+          </div>
+          <select id="langSel" hidden>
             <option value="zh">中</option>
             <option value="en">Eng</option>
             <option value="id">ID</option>
@@ -1468,7 +1629,6 @@ td.num, th.num {
           <select id="complaintSubjectFilter" aria-label="主題"></select>
         </div>
       </div>
-      <div class="complaints-warn" id="complaintsWarn" hidden></div>
       <p class="complaints-meta" id="complaintsMeta"></p>
       <div class="complaints-charts" id="complaintsChartsRow">
         <div class="compl-chart-card complaint-bar-card" id="complaintBarCard">
@@ -1503,6 +1663,7 @@ td.num, th.num {
           <select id="complaintSubjectFilterTable" aria-label="主題"></select>
         </div>
       </div>
+      <div class="complaints-warn" id="complaintsWarn" hidden></div>
       <div id="complaintsTableWrap">
         <table id="complaintsTable">
           <thead id="complaintsThead"></thead>
@@ -1646,6 +1807,10 @@ td.num, th.num {
         periodMonthClear: "清除月份",
         periodMonths: "月份（複選）",
         periodHint: "若已填「起始」與「結束」年月，以區間為準。未填起迄年月時，會套用「年份區間」與「月份複選」。留空＝不限制該項。",
+        complaints: "客訴",
+        complaintRoomRange: "房號",
+        complaintCountRange: "次數",
+        complaintClear: "清除客訴篩選",
         currency: "貨幣", 
         metric: "收入", 
         lang: "語言" 
@@ -1691,7 +1856,7 @@ td.num, th.num {
         colResult: "結果",
         colProgress: "進度",
         meta: (n, real) => `本表 ${n} 列（實際客訴 ${real} 筆）`,
-        warn: (rooms, th) => `以下房號在本期間實際客訴 ≥ ${th} 次，建議複查是否為反覆故障：${rooms}`,
+        warn: (rooms, th) => `客訴 ≥ ${th} 次，房號：${rooms}`,
         empty: "尚無客訴資料。請確認試算表已有「Complaints」分頁，且 Apps Script 已部署為合併回傳 complaints。",
         noSlice: "（無實際客訴可統計）",
         sectionTitle: "客訴與維修紀錄",
@@ -1742,6 +1907,10 @@ td.num, th.num {
         periodMonthClear: "Clear months",
         periodMonths: "Months (multi)",
         periodHint: "If both start and end month are set, the month range applies. Otherwise, year range + month checkboxes are used. Empty = no filter on that axis.",
+        complaints: "Complaints",
+        complaintRoomRange: "Room",
+        complaintCountRange: "Count",
+        complaintClear: "Clear complaint filter",
         currency: "Currency", 
         metric: "Revenue", 
         lang: "Language" 
@@ -1787,7 +1956,7 @@ td.num, th.num {
         colResult: "Result",
         colProgress: "Progress",
         meta: (n, real) => `${n} row(s), ${real} real complaint(s)`,
-        warn: (rooms, th) => `Rooms with ≥ ${th} real complaint(s) in this period — review for recurring faults: ${rooms}`,
+        warn: (rooms, th) => `Complaints ≥ ${th}: ${rooms}`,
         empty: "No complaint data. Add a \"Complaints\" tab and deploy merged Apps Script.",
         noSlice: "(No real complaints in period)",
         sectionTitle: "Guest complaints & maintenance",
@@ -1836,6 +2005,10 @@ td.num, th.num {
         periodMonthClear: "Hapus bulan",
         periodMonths: "Bulan (multi)",
         periodHint: "Jika bulan mulai & akhir diisi, rentang bulan dipakai. Jika tidak, rentang tahun + centang bulan dipakai. Kosong = tidak memfilter.",
+        complaints: "Keluhan",
+        complaintRoomRange: "Kamar",
+        complaintCountRange: "Jumlah",
+        complaintClear: "Hapus filter keluhan",
         currency: "Mata Uang", 
         metric: "Pendapatan", 
         lang: "Bahasa" 
@@ -1881,7 +2054,7 @@ td.num, th.num {
         colResult: "Hasil",
         colProgress: "Progres",
         meta: (n, real) => `${n} baris, ${real} komplain nyata`,
-        warn: (rooms, th) => `Kamar dengan ≥ ${th} komplain nyata di periode ini — periksa masalah berulang: ${rooms}`,
+        warn: (rooms, th) => `Komplain ≥ ${th}, kamar: ${rooms}`,
         empty: "Belum ada data. Pastikan sheet \"Complaints\" dan Apps Script gabungan sudah deploy.",
         noSlice: "(Tidak ada komplain nyata)",
         sectionTitle: "Komplain & perawatan",
@@ -1933,9 +2106,28 @@ function updateLangUI(){
     document.getElementById("periodMonthClear").textContent = L.filters.periodMonthClear;
     const ph = document.getElementById("periodHint");
     if (ph) ph.textContent = L.filters.periodHint;
+    const lcf = document.getElementById("lblComplaintFilter");
+    if (lcf) lcf.textContent = L.filters.complaints;
+    const lcr = document.getElementById("lblComplaintRoomRange");
+    if (lcr) lcr.textContent = L.filters.complaintRoomRange;
+    const lcc = document.getElementById("lblComplaintCountRange");
+    if (lcc) lcc.textContent = L.filters.complaintCountRange;
+    const crm1 = document.getElementById("complaintRoomMin");
+    const crm2 = document.getElementById("complaintRoomMax");
+    const ccm1 = document.getElementById("complaintCountMin");
+    const ccm2 = document.getElementById("complaintCountMax");
+    const phStart = L.filters.periodStart || "";
+    const phEnd = L.filters.periodEnd || "";
+    if (crm1) crm1.setAttribute("placeholder", phStart);
+    if (crm2) crm2.setAttribute("placeholder", phEnd);
+    if (ccm1) ccm1.setAttribute("placeholder", phStart);
+    if (ccm2) ccm2.setAttribute("placeholder", phEnd);
+    const cclr = document.getElementById("complaintFilterClear");
+    if (cclr) cclr.textContent = L.filters.complaintClear || "";
+    updateComplaintFilterButtonText();
     document.getElementById("lblCurrency").textContent = L.filters.currency;
     document.getElementById("lblMetric").textContent = L.filters.metric;
-    document.getElementById("lblLang").textContent = "Language";
+    document.getElementById("lblLang").textContent = L.filters.lang;
     document.getElementById("titlePie").textContent = L.chartTitles.pie;
     document.getElementById("titleLine").textContent = L.chartTitles.line;
     document.getElementById("noteRate").textContent = getNoteText(currentLang);
@@ -1977,6 +2169,7 @@ function updateLangUI(){
       `<option value="${opt.val}">${opt.text}</option>`
     ).join('');
     if(oldCur) currencySel.value = oldCur;
+    rebuildCurrencyDropdown();
 
     // ✅ 改：收入多選（checkbox）用這個重新生成（保留既有勾選）
     const keep = (typeof getSelectedMetrics === 'function') ? getSelectedMetrics() : [];
@@ -2048,6 +2241,9 @@ function updateLangUI(){
   const periodYearEnd = document.getElementById('periodYearEnd');
   const monthCheckList = document.getElementById('monthCheckList');
   const currencySel = document.getElementById('currencySel');
+  const currencyBtn = document.getElementById('currencyBtn');
+  const currencyDropdown = document.getElementById('currencyDropdown');
+  const currencyList = document.getElementById('currencyList');
   const trendCard = document.querySelector('.chart-right');
 
   // 記錄最近使用的「月份」（切換年/月模式時會用到）
@@ -2221,6 +2417,9 @@ function updateLangUI(){
   const indList = document.getElementById('indList');
 
   const langSel = document.getElementById('langSel');
+  const langBtn = document.getElementById('langBtn');
+  const langDropdown = document.getElementById('langDropdown');
+  const langList = document.getElementById('langList');
   const thead = document.getElementById('thead');
   const tbody = document.getElementById('tbody');
   const tfoot = document.getElementById('tfoot');
@@ -2248,7 +2447,15 @@ function updateLangUI(){
     if(!metricBtn._bound){
       metricBtn.addEventListener('click', (e)=>{
         e.stopPropagation(); // 不要冒泡
-        metricBtn.parentElement.classList.toggle('show');
+        const dd = metricBtn.parentElement;
+        if (!dd) return;
+        const isOpen = dd.classList.contains('show');
+        if (isOpen) {
+          dd.classList.remove('show');
+          return;
+        }
+        closeOtherDropdowns(dd);
+        dd.classList.add('show');
       });
       metricBtn._bound = true;
     }
@@ -2293,7 +2500,15 @@ function updateLangUI(){
     if(!indBtn._bound){
       indBtn.addEventListener('click', (e)=>{
         e.stopPropagation();
-        indBtn.parentElement.classList.toggle('show');
+        const dd = indBtn.parentElement;
+        if (!dd) return;
+        const isOpen = dd.classList.contains('show');
+        if (isOpen) {
+          dd.classList.remove('show');
+          return;
+        }
+        closeOtherDropdowns(dd);
+        dd.classList.add('show');
       });
       indBtn._bound = true;
     }
@@ -2956,6 +3171,124 @@ function updateLangUI(){
     sub.textContent = ptxt ? prefix + ptxt : "";
   }
 
+  function updateComplaintFilterButtonText() {
+    const btn = document.getElementById("complaintFilterBtn");
+    if (!btn) return;
+    const rmMin = String((document.getElementById("complaintRoomMin") || {}).value || "").trim();
+    const rmMax = String((document.getElementById("complaintRoomMax") || {}).value || "").trim();
+    const ctMin = String((document.getElementById("complaintCountMin") || {}).value || "").trim();
+    const ctMax = String((document.getElementById("complaintCountMax") || {}).value || "").trim();
+    const hasRm = rmMin !== "" || rmMax !== "";
+    const hasCt = ctMin !== "" || ctMax !== "";
+    if (!hasRm && !hasCt) {
+      btn.textContent = "—";
+      return;
+    }
+    const L = LANGS[currentLang] || {};
+    const F = (L.filters || {});
+    const rmLab = F.complaintRoomRange || (currentLang === "en" ? "Room" : currentLang === "id" ? "Kamar" : "房號");
+    const ctLab = F.complaintCountRange || (currentLang === "en" ? "Count" : currentLang === "id" ? "Jumlah" : "次數");
+    const parts = [];
+    if (hasRm) parts.push(`${rmLab} ${rmMin || "—"}~${rmMax || "—"}`);
+    if (hasCt) parts.push(`${ctLab} ${ctMin || "—"}~${ctMax || "—"}`);
+    btn.textContent = parts.join(" / ");
+  }
+
+  function closeOtherDropdowns(keepEl) {
+    const all = document.querySelectorAll('.dropdown.show');
+    all.forEach(function (dd) {
+      if (keepEl && dd === keepEl) return;
+      dd.classList.remove('show');
+    });
+  }
+
+  // 點側欄空白/標題：收合所有下拉（但點在下拉內部不收合）
+  if (!window._filtersCloseBlankBound) {
+    const filtersEl = document.querySelector('.filters');
+    if (filtersEl) {
+      filtersEl.addEventListener('click', function (e) {
+        try {
+          const t = e && e.target ? e.target : null;
+          if (t && typeof t.closest === 'function' && t.closest('.dropdown')) return;
+          closeOtherDropdowns(null);
+        } catch (_) {}
+      });
+    }
+    window._filtersCloseBlankBound = true;
+  }
+
+  function syncCurrencyUIFromSelect() {
+    if (!currencySel) return;
+    if (currencyBtn) {
+      const opt = currencySel.options && currencySel.selectedIndex >= 0
+        ? currencySel.options[currencySel.selectedIndex]
+        : null;
+      currencyBtn.textContent = opt ? (opt.textContent || opt.value || "—") : (currencySel.value || "—");
+    }
+    if (currencyList) {
+      const cur = currencySel.value;
+      Array.from(currencyList.querySelectorAll('label')).forEach(function (lab) {
+        const v = lab && lab.dataset ? lab.dataset.value : "";
+        lab.style.background = v === cur ? "rgba(56,189,248,0.18)" : "";
+      });
+    }
+  }
+
+  function rebuildCurrencyDropdown() {
+    if (!currencySel || !currencyList) return;
+    currencyList.innerHTML = Array.from(currencySel.options).map(function (o) {
+      const v = o.value;
+      const t = o.textContent || o.value;
+      return `<label data-value="${v}">${t}</label>`;
+    }).join('');
+    currencyList.querySelectorAll('label').forEach(function (lab) {
+      lab.addEventListener('click', function () {
+        const v = lab.dataset.value || "";
+        currencySel.value = v;
+        currencySel.dispatchEvent(new Event('change', { bubbles: true }));
+        syncCurrencyUIFromSelect();
+        if (currencyDropdown) currencyDropdown.classList.remove('show');
+      });
+    });
+    syncCurrencyUIFromSelect();
+  }
+
+  function syncLangUIFromSelect() {
+    if (!langSel) return;
+    if (langBtn) {
+      const opt = langSel.options && langSel.selectedIndex >= 0
+        ? langSel.options[langSel.selectedIndex]
+        : null;
+      langBtn.textContent = opt ? (opt.textContent || opt.value || "—") : (langSel.value || "—");
+    }
+    if (langList) {
+      const cur = langSel.value;
+      Array.from(langList.querySelectorAll('label')).forEach(function (lab) {
+        const v = lab && lab.dataset ? lab.dataset.value : "";
+        lab.style.background = v === cur ? "rgba(56,189,248,0.18)" : "";
+      });
+    }
+  }
+
+  function rebuildLangDropdown() {
+    if (!langSel || !langList) return;
+    langList.innerHTML = Array.from(langSel.options).map(function (o) {
+      const v = o.value;
+      const t = o.textContent || o.value;
+      return `<label data-value="${v}">${t}</label>`;
+    }).join('');
+    langList.querySelectorAll('label').forEach(function (lab) {
+      lab.addEventListener('click', function () {
+        const v = lab.dataset.value || "";
+        langSel.value = v;
+        langSel.dispatchEvent(new Event('change', { bubbles: true }));
+        syncLangUIFromSelect();
+        if (langDropdown) langDropdown.classList.remove('show');
+      });
+    });
+    syncLangUIFromSelect();
+  }
+
   function renderComplaints() {
     const L = LANGS[currentLang];
     const C = L.complaints || {};
@@ -2965,6 +3298,11 @@ function updateLangUI(){
     const warnEl = document.getElementById("complaintsWarn");
     const roomSel = document.getElementById("complaintRoomFilter");
     const hideNo = document.getElementById("complaintHideNoComplaint");
+    const cRmMinEl = document.getElementById("complaintRoomMin");
+    const cRmMaxEl = document.getElementById("complaintRoomMax");
+    const cCtMinEl = document.getElementById("complaintCountMin");
+    const cCtMaxEl = document.getElementById("complaintCountMax");
+    updateComplaintFilterButtonText();
     const theadC = document.getElementById("complaintsThead");
     const tbodyC = document.getElementById("complaintsTbody");
     const wrap = document.getElementById("complaintsTableWrap");
@@ -3062,34 +3400,143 @@ function updateLangUI(){
     const roomFilter = roomSel.value;
     const subjectFilter = subjSel ? subjSel.value : "";
     const hideNoRows = hideNo && hideNo.checked;
-    const displayRows = [];
+    const baseRows = [];
     for (let i = 0; i < COMPLAINTS_RAW.length; i++) {
       const row = COMPLAINTS_RAW[i];
       if (!complaintMatchesPeriod(row)) continue;
       if (roomFilter && complaintRoomStr(row) !== roomFilter) continue;
       if (subjectFilter && complaintSubjectStr(row) !== subjectFilter) continue;
       if (hideNoRows && isNoComplaintRow(row)) continue;
-      displayRows.push(row);
+      baseRows.push(row);
     }
-    displayRows.sort(function (a, b) {
-      const ta = complaintRowDateObj(a);
-      const tb = complaintRowDateObj(b);
-      if (ta && tb && ta.str !== tb.str) return ta.str < tb.str ? -1 : 1;
-      if (ta && !tb) return -1;
-      if (!ta && tb) return 1;
-      const ra = complaintRoomStr(a);
-      const rb = complaintRoomStr(b);
-      const na = Number(ra);
-      const nb = Number(rb);
-      if (!isNaN(na) && !isNaN(nb) && String(na) === ra && String(nb) === rb) {
-        if (na !== nb) return na - nb;
-      } else if (ra !== rb) {
-        return String(ra).localeCompare(String(rb), undefined, { numeric: true });
+
+    const rmMinRaw = cRmMinEl ? String(cRmMinEl.value || "").trim() : "";
+    const rmMaxRaw = cRmMaxEl ? String(cRmMaxEl.value || "").trim() : "";
+    const ctMinRaw = cCtMinEl ? String(cCtMinEl.value || "").trim() : "";
+    const ctMaxRaw = cCtMaxEl ? String(cCtMaxEl.value || "").trim() : "";
+    const rmMin = rmMinRaw ? Number(rmMinRaw) : null;
+    const rmMax = rmMaxRaw ? Number(rmMaxRaw) : null;
+    const ctMin = ctMinRaw ? Number(ctMinRaw) : null;
+    const ctMax = ctMaxRaw ? Number(ctMaxRaw) : null;
+    const hasRmRange = rmMinRaw !== "" || rmMaxRaw !== "";
+    const hasCtRange = ctMinRaw !== "" || ctMaxRaw !== "";
+    function asPureNumber(s) {
+      const t = String(s == null ? "" : s).trim();
+      if (!t) return null;
+      if (!/^\d+$/.test(t)) return null;
+      const n = Number(t);
+      return isNaN(n) ? null : n;
+    }
+    function roomInRange(rm) {
+      if (!hasRmRange) return true;
+      const n = asPureNumber(rm);
+      if (n === null) return false;
+      if (rmMin !== null && !isNaN(rmMin) && n < rmMin) return false;
+      if (rmMax !== null && !isNaN(rmMax) && n > rmMax) return false;
+      return true;
+    }
+    function countInRange(cnt) {
+      if (!hasCtRange) return true;
+      const n = Number(cnt) || 0;
+      if (ctMin !== null && !isNaN(ctMin) && n < ctMin) return false;
+      if (ctMax !== null && !isNaN(ctMax) && n > ctMax) return false;
+      return true;
+    }
+
+    const realForChartsBase = [];
+    for (let ri = 0; ri < COMPLAINTS_RAW.length; ri++) {
+      const row = COMPLAINTS_RAW[ri];
+      if (!complaintMatchesPeriod(row)) continue;
+      if (isNoComplaintRow(row)) continue;
+      if (roomFilter && complaintRoomStr(row) !== roomFilter) continue;
+      if (subjectFilter && complaintSubjectStr(row) !== subjectFilter) continue;
+      realForChartsBase.push(row);
+    }
+    const baseRoomCount = {};
+    for (let k0 = 0; k0 < realForChartsBase.length; k0++) {
+      const rw0 = realForChartsBase[k0];
+      const rm0 = complaintRoomStr(rw0) || "";
+      if (!rm0) continue;
+      baseRoomCount[rm0] = (baseRoomCount[rm0] || 0) + 1;
+    }
+    const candidateRooms = new Set();
+    for (let br = 0; br < baseRows.length; br++) {
+      const rm = String(complaintRoomStr(baseRows[br]) || "").trim();
+      if (rm) candidateRooms.add(rm);
+    }
+    const allowedRooms = new Set();
+    candidateRooms.forEach(function (rm) {
+      const cnt = baseRoomCount[rm] || 0;
+      if (roomInRange(rm) && countInRange(cnt)) allowedRooms.add(rm);
+    });
+    const displayRows = baseRows.filter(function (row) {
+      const rm = String(complaintRoomStr(row) || "").trim();
+      if (!rm) return !hasRmRange && !hasCtRange;
+      return allowedRooms.has(rm);
+    });
+    const _idx = new Map();
+    for (let ii = 0; ii < displayRows.length; ii++) _idx.set(displayRows[ii], ii);
+    const cSortState =
+      window._complaintSort &&
+      typeof window._complaintSort === "object" &&
+      typeof window._complaintSort.key === "string"
+        ? window._complaintSort
+        : { key: "date", dir: "asc" };
+    const cSortKey = cSortState.key || "date";
+    const cSortDir = cSortState.dir === "desc" ? "desc" : "asc";
+    function sortVal(row, key) {
+      switch (key) {
+        case "date": {
+          const t = complaintRowDateObj(row);
+          return t ? t.str : "";
+        }
+        case "room":
+          return complaintRoomStr(row);
+        case "subject":
+          return complaintSubjectStr(row);
+        case "fo":
+          return cPick(row, "FO", "Fo") || "";
+        case "eng":
+          return cPick(row, "ENG", "Eng") || "";
+        case "hk":
+          return cPick(row, "HK", "Hk") || "";
+        case "repair":
+          return cPick(row, "REPAIR", "Repair") || "";
+        case "time":
+          return complaintRowTime(row);
+        case "result":
+          return cPick(row, "RESULT", "Result") || "";
+        case "progress":
+          return cPick(row, "PROGRES", "PROGRESS", "Progress") || "";
+        default: {
+          const t = complaintRowDateObj(row);
+          return t ? t.str : "";
+        }
+      }
+    }
+    function cmp(a, b) {
+      if (cSortKey === "room") {
+        const ra = String(sortVal(a, "room") || "").trim();
+        const rb = String(sortVal(b, "room") || "").trim();
+        const na = Number(ra);
+        const nb = Number(rb);
+        let d = 0;
+        if (!isNaN(na) && !isNaN(nb) && String(na) === ra && String(nb) === rb) d = na - nb;
+        else d = ra.localeCompare(rb, undefined, { numeric: true });
+        if (d !== 0) return cSortDir === "desc" ? -d : d;
+      } else {
+        const va = String(sortVal(a, cSortKey) || "").trim();
+        const vb = String(sortVal(b, cSortKey) || "").trim();
+        let d = 0;
+        if (va !== vb) d = va.localeCompare(vb, undefined, { numeric: true });
+        if (d !== 0) return cSortDir === "desc" ? -d : d;
       }
       const n1 = Number(cPick(a, "No")) || 0;
       const n2 = Number(cPick(b, "No")) || 0;
-      return n1 - n2;
-    });
+      if (n1 !== n2) return n1 - n2;
+      return (_idx.get(a) || 0) - (_idx.get(b) || 0);
+    }
+    displayRows.sort(cmp);
 
     let realInTable = 0;
     for (let j = 0; j < displayRows.length; j++) {
@@ -3099,15 +3546,12 @@ function updateLangUI(){
       metaEl.textContent = C.meta(displayRows.length, realInTable);
     }
 
-    const realForCharts = [];
-    for (let ri = 0; ri < COMPLAINTS_RAW.length; ri++) {
-      const row = COMPLAINTS_RAW[ri];
-      if (!complaintMatchesPeriod(row)) continue;
-      if (isNoComplaintRow(row)) continue;
-      if (roomFilter && complaintRoomStr(row) !== roomFilter) continue;
-      if (subjectFilter && complaintSubjectStr(row) !== subjectFilter) continue;
-      realForCharts.push(row);
-    }
+    const realForCharts = realForChartsBase.filter(function (row) {
+      const rm = String(complaintRoomStr(row) || "").trim();
+      if (!rm) return false;
+      if (!hasRmRange && !hasCtRange) return true;
+      return allowedRooms.has(rm);
+    });
     const roomCount = {};
     const roomSubjectCount = {};
     const monthCount = {};
@@ -3729,25 +4173,61 @@ function updateLangUI(){
     tbodyC.innerHTML = "";
 
     const trh = document.createElement("tr");
+    function setSort(nextKey) {
+      const cur =
+        window._complaintSort &&
+        typeof window._complaintSort === "object" &&
+        typeof window._complaintSort.key === "string"
+          ? window._complaintSort
+          : { key: "date", dir: "asc" };
+      const same = cur.key === nextKey;
+      window._complaintSort = {
+        key: nextKey,
+        dir: same && cur.dir === "asc" ? "desc" : "asc"
+      };
+      renderComplaints();
+    }
     function addThCompl(tr, text) {
       const th = document.createElement("th");
       th.textContent = text || "";
       tr.appendChild(th);
     }
-    addThCompl(trh, C.colDate);
-    [
-      C.colRoom,
-      C.colSubject,
-      C.colFo,
-      C.colEng,
-      C.colHk,
-      C.colRepair,
-      C.colTime,
-      C.colResult,
-      C.colProgress
-    ].forEach(function (text) {
-      addThCompl(trh, text);
-    });
+    function addThSortable(tr, key, label) {
+      const th = document.createElement("th");
+      th.className = "sortable" + (key === cSortKey ? " active" : "");
+      th.setAttribute("role", "button");
+      th.setAttribute("tabindex", "0");
+      th.setAttribute(
+        "aria-sort",
+        key === cSortKey ? (cSortDir === "desc" ? "descending" : "ascending") : "none"
+      );
+      const spanLabel = document.createElement("span");
+      spanLabel.textContent = label || "";
+      const spanI = document.createElement("span");
+      spanI.className = "si";
+      spanI.textContent = key === cSortKey ? (cSortDir === "desc" ? "▼" : "▲") : "";
+      th.appendChild(spanLabel);
+      th.appendChild(spanI);
+      th.addEventListener("click", function () { setSort(key); });
+      th.addEventListener("keydown", function (e) {
+        if (!e) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setSort(key);
+        }
+      });
+      tr.appendChild(th);
+    }
+    addThSortable(trh, "date", C.colDate);
+    addThSortable(trh, "room", C.colRoom);
+    addThSortable(trh, "subject", C.colSubject);
+    addThSortable(trh, "fo", C.colFo);
+    addThSortable(trh, "eng", C.colEng);
+    addThSortable(trh, "hk", C.colHk);
+    addThSortable(trh, "repair", C.colRepair);
+    addThSortable(trh, "time", C.colTime);
+    addThSortable(trh, "result", C.colResult);
+    addThSortable(trh, "progress", C.colProgress);
     theadC.appendChild(trh);
 
     function cell(v) {
@@ -3817,12 +4297,63 @@ function updateLangUI(){
     // 更新年/月切換按鈕的文字
     updateModeToggleLabels();
 
+    const rSortState =
+      window._revenueSort &&
+      typeof window._revenueSort === "object" &&
+      typeof window._revenueSort.key === "string"
+        ? window._revenueSort
+        : { key: isDaily ? "date" : "ym", dir: "asc" };
+    const rSortKey = rSortState.key || (isDaily ? "date" : "ym");
+    const rSortDir = rSortState.dir === "desc" ? "desc" : "asc";
+    function setRevenueSort(nextKey) {
+      const curS =
+        window._revenueSort &&
+        typeof window._revenueSort === "object" &&
+        typeof window._revenueSort.key === "string"
+          ? window._revenueSort
+          : { key: isDaily ? "date" : "ym", dir: "asc" };
+      const same = curS.key === nextKey;
+      window._revenueSort = {
+        key: nextKey,
+        dir: same && curS.dir === "asc" ? "desc" : "asc"
+      };
+      render();
+    }
+
     // 小工具：建立 <th>
     function addTh(tr, text, {num=false, extra=false} = {}){
       const th = document.createElement('th');
       th.textContent = text;
       if (num)   th.classList.add('num');
       if (extra) th.classList.add('mobile-extra');
+      tr.appendChild(th);
+    }
+    function addThSortable(tr, key, text, {num=false, extra=false} = {}) {
+      const th = document.createElement('th');
+      th.className = "sortable" + (key === rSortKey ? " active" : "");
+      if (num) th.classList.add('num');
+      if (extra) th.classList.add('mobile-extra');
+      th.setAttribute("role", "button");
+      th.setAttribute("tabindex", "0");
+      th.setAttribute(
+        "aria-sort",
+        key === rSortKey ? (rSortDir === "desc" ? "descending" : "ascending") : "none"
+      );
+      const spanLabel = document.createElement("span");
+      spanLabel.textContent = text || "";
+      const spanI = document.createElement("span");
+      spanI.className = "si";
+      spanI.textContent = key === rSortKey ? (rSortDir === "desc" ? "▼" : "▲") : "";
+      th.appendChild(spanLabel);
+      th.appendChild(spanI);
+      th.addEventListener("click", function () { setRevenueSort(key); });
+      th.addEventListener("keydown", function (e) {
+        if (!e) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setRevenueSort(key);
+        }
+      });
       tr.appendChild(th);
     }
 
@@ -3841,51 +4372,51 @@ function updateLangUI(){
 
     if (isDaily) {
       // 星期 / 日期 一律顯示
-      addTh(trh, L.table.weekday, { num:false, extra:false });
-      addTh(trh, L.table.date,    { num:false, extra:false });
+      addThSortable(trh, "weekday", L.table.weekday, { num:false, extra:false });
+      addThSortable(trh, "date",    L.table.date,    { num:false, extra:false });
 
       // 房務 / 其他收入欄位
       COLS.forEach(c => {
         const label = L.metricOpts.find(m => m.val === c.key)?.text || c.key;
         const isRoom = (c.key === 'Room Revenue'); // 房務欄位
         // 手機預設：只顯示房務，其它收入標成 mobile-extra
-        addTh(trh, label, { num:true, extra: !isRoom });
+        addThSortable(trh, `metric:${c.key}`, label, { num:true, extra: !isRoom });
       });
 
       // 總收入：主要欄位（不隱藏）
-      addTh(trh, L.table.total, { num:true, extra:false });
+      addThSortable(trh, "total", L.table.total, { num:true, extra:false });
 
       // Sold / RNA / RNO：額外欄位（mobile-extra）
-      addTh(trh, L.table.roomSold, { num:true, extra:true });
-      addTh(trh, L.table.rna,      { num:true, extra:true });
-      addTh(trh, L.table.rno,      { num:true, extra:true });
+      addThSortable(trh, "extra:Room Sold",  L.table.roomSold, { num:true, extra:true });
+      addThSortable(trh, "extra:RNA Actual", L.table.rna,      { num:true, extra:true });
+      addThSortable(trh, "extra:RNO Budget", L.table.rno,      { num:true, extra:true });
 
       // 住房率%、平均房價：主要欄位（不隱藏）
-      addTh(trh, L.table.occ, { num:true, extra:false });
-      addTh(trh, L.table.arr, { num:true, extra:false });
+      addThSortable(trh, "occ", L.table.occ, { num:true, extra:false });
+      addThSortable(trh, "arr", L.table.arr, { num:true, extra:false });
     } else {
       // 年 / 月 一律顯示
-      addTh(trh, L.table.year,  { num:false, extra:false });
-      addTh(trh, L.table.month, { num:false, extra:false });
+      addThSortable(trh, "year",  L.table.year,  { num:false, extra:false });
+      addThSortable(trh, "month", L.table.month, { num:false, extra:false });
 
       // 房務 / 其他收入欄位
       COLS.forEach(c => {
         const label = L.metricOpts.find(m => m.val === c.key)?.text || c.key;
         const isRoom = (c.key === 'Room Revenue');
-        addTh(trh, label, { num:true, extra: !isRoom });
+        addThSortable(trh, `metric:${c.key}`, label, { num:true, extra: !isRoom });
       });
 
       // 總收入：主要欄位
-      addTh(trh, L.table.total, { num:true, extra:false });
+      addThSortable(trh, "total", L.table.total, { num:true, extra:false });
 
       // Sold / RNA / RNO：額外欄位
-      addTh(trh, L.table.roomSold, { num:true, extra:true });
-      addTh(trh, L.table.rna,      { num:true, extra:true });
-      addTh(trh, L.table.rno,      { num:true, extra:true });
+      addThSortable(trh, "extra:Room Sold",  L.table.roomSold, { num:true, extra:true });
+      addThSortable(trh, "extra:RNA Actual", L.table.rna,      { num:true, extra:true });
+      addThSortable(trh, "extra:RNO Budget", L.table.rno,      { num:true, extra:true });
 
       // 住房率%、平均房價：主要欄位
-      addTh(trh, L.table.occ, { num:true, extra:false });
-      addTh(trh, L.table.arr, { num:true, extra:false });
+      addThSortable(trh, "occ", L.table.occ, { num:true, extra:false });
+      addThSortable(trh, "arr", L.table.arr, { num:true, extra:false });
     }
 
     thead.appendChild(trh);
@@ -3899,14 +4430,55 @@ function updateLangUI(){
 
     if (isDaily) {
       const dm = getDailyYM();
-      const dayRows = dm
-        ? rows
-            .filter(r => {
-              const t = parseYMD(r.Date);
-              return t && t.y === dm.y && t.m === dm.m;
-            })
-            .sort((a,b) => parseYMD(a.Date).d - parseYMD(b.Date).d)
+      const dayRowsBase = dm
+        ? rows.filter(r => {
+            const t = parseYMD(r.Date);
+            return t && t.y === dm.y && t.m === dm.m;
+          })
         : [];
+      const dayIdx = new Map();
+      for (let i0 = 0; i0 < dayRowsBase.length; i0++) dayIdx.set(dayRowsBase[i0], i0);
+      const dayCache = new Map();
+      function dayVal(r, key) {
+        const t = parseYMD(r.Date);
+        if (key === "weekday") return t ? t.wd : -1;
+        if (key === "date") return t ? (t.y * 10000 + t.m * 100 + t.d) : 0;
+        if (key === "ym") return t ? (t.y * 100 + t.m) : 0;
+        if (key === "total" || key === "occ" || key === "arr") {
+          if (dayCache.has(r)) return dayCache.get(r)[key];
+          const rs = toNumber(r['Room Sold']);
+          const ra = toNumber(r['RNA Actual']);
+          let rowTotal = 0;
+          for (const c of COLS) rowTotal += toNumber(r[c.key]);
+          const occ = (ra > 0) ? (rs / ra * 100) : 0;
+          const arr = (rs > 0) ? idrTo(cur, toNumber(r["Room Revenue"]) / rs) : 0;
+          const pack = { total: idrTo(cur, rowTotal), occ: occ, arr: arr };
+          dayCache.set(r, pack);
+          return pack[key];
+        }
+        if (key.startsWith("metric:")) {
+          const k = key.slice("metric:".length);
+          return idrTo(cur, toNumber(r[k]));
+        }
+        if (key.startsWith("extra:")) {
+          const k = key.slice("extra:".length);
+          return toNumber(r[k]);
+        }
+        return 0;
+      }
+      const dayRows = dayRowsBase.slice().sort(function (a, b) {
+        let d = 0;
+        if (rSortKey === "weekday" || rSortKey === "date" || rSortKey === "ym" ||
+            rSortKey === "total" || rSortKey === "occ" || rSortKey === "arr" ||
+            rSortKey.startsWith("metric:") || rSortKey.startsWith("extra:")) {
+          d = dayVal(a, rSortKey) - dayVal(b, rSortKey);
+        }
+        if (!isFinite(d) || d === 0) {
+          d = dayVal(a, "date") - dayVal(b, "date");
+        }
+        if (d !== 0) return rSortDir === "desc" ? -d : d;
+        return (dayIdx.get(a) || 0) - (dayIdx.get(b) || 0);
+      });
 
       for (const r of dayRows) {
         const t = parseYMD(r.Date);
@@ -3980,7 +4552,46 @@ function updateLangUI(){
       }
 
       const groups = Array.from(map.values())
-        .sort((a,b)=> a.Year - b.Year || a.Month - b.Month);
+        .map(function (g, idx) { return { g: g, idx: idx }; })
+        .sort(function (A, B) {
+          const a = A.g, b = B.g;
+          function gVal(g, key) {
+            if (key === "year") return Number(g.Year) || 0;
+            if (key === "month") return Number(g.Month) || 0;
+            if (key === "ym") return (Number(g.Year) || 0) * 100 + (Number(g.Month) || 0);
+            if (key === "total") {
+              let sum = 0;
+              for (const c of COLS) sum += Number(g.totals[c.key]) || 0;
+              return idrTo(cur, sum);
+            }
+            if (key.startsWith("metric:")) {
+              const k = key.slice("metric:".length);
+              return idrTo(cur, Number(g.totals[k]) || 0);
+            }
+            if (key.startsWith("extra:")) {
+              const k = key.slice("extra:".length);
+              return Number(g.extras[k]) || 0;
+            }
+            if (key === "occ" || key === "arr") {
+              const rs = Number(g.extras['Room Sold']) || 0;
+              const ra = Number(g.extras['RNA Actual']) || 0;
+              const occ = (ra > 0) ? (rs / ra * 100) : 0;
+              const arr = (rs > 0) ? idrTo(cur, (Number(g.totals['Room Revenue']) || 0) / rs) : 0;
+              return key === "occ" ? occ : arr;
+            }
+            return 0;
+          }
+          let d = 0;
+          if (rSortKey === "month" || rSortKey === "year" || rSortKey === "ym" ||
+              rSortKey === "total" || rSortKey === "occ" || rSortKey === "arr" ||
+              rSortKey.startsWith("metric:") || rSortKey.startsWith("extra:")) {
+            d = gVal(a, rSortKey) - gVal(b, rSortKey);
+          }
+          if (!isFinite(d) || d === 0) d = gVal(a, "ym") - gVal(b, "ym");
+          if (d !== 0) return rSortDir === "desc" ? -d : d;
+          return A.idx - B.idx;
+        })
+        .map(function (x) { return x.g; });
 
       for (const g of groups) {
         const tr = document.createElement('tr');
@@ -4143,6 +4754,10 @@ function updateLangUI(){
       const cs = document.getElementById("complaintSubjectFilter");
       const csT = document.getElementById("complaintSubjectFilterTable");
       const hn = document.getElementById("complaintHideNoComplaint");
+      const cRmMinEl = document.getElementById("complaintRoomMin");
+      const cRmMaxEl = document.getElementById("complaintRoomMax");
+      const cCtMinEl = document.getElementById("complaintCountMin");
+      const cCtMaxEl = document.getElementById("complaintCountMax");
       if (cr && crT) {
         cr.addEventListener("change", function () {
           crT.value = cr.value;
@@ -4170,6 +4785,20 @@ function updateLangUI(){
         if (csT) csT.addEventListener("change", renderComplaints);
       }
       if (hn) hn.addEventListener("change", renderComplaints);
+      function bindComplaintRangeInput(el) {
+        if (!el) return;
+        el.addEventListener("input", function () {
+          if (window._complaintFilterTimer) clearTimeout(window._complaintFilterTimer);
+          window._complaintFilterTimer = setTimeout(function () {
+            updateComplaintFilterButtonText();
+            renderComplaints();
+          }, 120);
+        });
+      }
+      bindComplaintRangeInput(cRmMinEl);
+      bindComplaintRangeInput(cRmMaxEl);
+      bindComplaintRangeInput(cCtMinEl);
+      bindComplaintRangeInput(cCtMaxEl);
       window._complaintListeners = true;
     }
 
@@ -4275,7 +4904,13 @@ function updateLangUI(){
   if (periodBtn && periodDropdown && !periodBtn._pBound) {
     periodBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      periodDropdown.classList.toggle('show');
+      const isOpen = periodDropdown.classList.contains('show');
+      if (isOpen) {
+        periodDropdown.classList.remove('show');
+        return;
+      }
+      closeOtherDropdowns(periodDropdown);
+      periodDropdown.classList.add('show');
     });
     periodBtn._pBound = true;
   }
@@ -4285,6 +4920,89 @@ function updateLangUI(){
     });
     window._periodDocBound = true;
   }
+
+  // 客訴篩選下拉（房號/次數區間）
+  const complaintFilterBtn = document.getElementById('complaintFilterBtn');
+  const complaintFilterDropdown = document.getElementById('complaintFilterDropdown');
+  const complaintFilterClear = document.getElementById('complaintFilterClear');
+  if (complaintFilterBtn && complaintFilterDropdown && !complaintFilterBtn._cBound) {
+    complaintFilterBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = complaintFilterDropdown.classList.contains('show');
+      if (isOpen) {
+        complaintFilterDropdown.classList.remove('show');
+        return;
+      }
+      closeOtherDropdowns(complaintFilterDropdown);
+      complaintFilterDropdown.classList.add('show');
+    });
+    complaintFilterBtn._cBound = true;
+  }
+  if (!window._complaintFilterDocBound && complaintFilterDropdown) {
+    document.addEventListener('click', (e) => {
+      if (!complaintFilterDropdown.contains(e.target)) complaintFilterDropdown.classList.remove('show');
+    });
+    window._complaintFilterDocBound = true;
+  }
+  if (complaintFilterClear && !complaintFilterClear._cClrBound) {
+    complaintFilterClear.addEventListener('click', () => {
+      const a = document.getElementById('complaintRoomMin');
+      const b = document.getElementById('complaintRoomMax');
+      const c = document.getElementById('complaintCountMin');
+      const d = document.getElementById('complaintCountMax');
+      if (a) a.value = '';
+      if (b) b.value = '';
+      if (c) c.value = '';
+      if (d) d.value = '';
+      updateComplaintFilterButtonText();
+      renderComplaints();
+    });
+    complaintFilterClear._cClrBound = true;
+  }
+
+  // 貨幣下拉（取代原生 select，避免手機爆框）
+  if (currencyBtn && currencyDropdown && !currencyBtn._curBound) {
+    currencyBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = currencyDropdown.classList.contains('show');
+      if (isOpen) {
+        currencyDropdown.classList.remove('show');
+        return;
+      }
+      closeOtherDropdowns(currencyDropdown);
+      currencyDropdown.classList.add('show');
+    });
+    currencyBtn._curBound = true;
+  }
+  if (!window._currencyDocBound && currencyDropdown) {
+    document.addEventListener('click', (e) => {
+      if (!currencyDropdown.contains(e.target)) currencyDropdown.classList.remove('show');
+    });
+    window._currencyDocBound = true;
+  }
+  rebuildCurrencyDropdown();
+
+  // 語言下拉（取代原生 select，避免手機爆框）
+  if (langBtn && langDropdown && !langBtn._langBound) {
+    langBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = langDropdown.classList.contains('show');
+      if (isOpen) {
+        langDropdown.classList.remove('show');
+        return;
+      }
+      closeOtherDropdowns(langDropdown);
+      langDropdown.classList.add('show');
+    });
+    langBtn._langBound = true;
+  }
+  if (!window._langDocBound && langDropdown) {
+    document.addEventListener('click', (e) => {
+      if (!langDropdown.contains(e.target)) langDropdown.classList.remove('show');
+    });
+    window._langDocBound = true;
+  }
+  rebuildLangDropdown();
   if (periodStart) periodStart.addEventListener('change', () => { render(); updatePeriodButtonText(); });
   if (periodEnd) periodEnd.addEventListener('change', () => { render(); updatePeriodButtonText(); });
   const periodRangeClear = document.getElementById('periodRangeClear');
@@ -4324,12 +5042,16 @@ function updateLangUI(){
     });
   }
 
-  currencySel.addEventListener('change', render);
+  currencySel.addEventListener('change', function () {
+    syncCurrencyUIFromSelect();
+    render();
+  });
 
   // 語系切換
   langSel.addEventListener('change', e=>{
     currentLang = e.target.value;
     updateLangUI();
+    syncLangUIFromSelect();
     render();
   });
 
@@ -4495,11 +5217,6 @@ function updateLangUI(){
     &nbsp;&nbsp;&nbsp;• 系統會自動每 30 分鐘更新一次<br/>
     &nbsp;&nbsp;&nbsp;• 若 API 錯誤或網路異常，系統會保留上次成功的匯率<br/>
     <br/>
-    3. 客訴資料：<br/>
-    &nbsp;&nbsp;&nbsp;•與上方「期間」篩選一致。<br/>
-    &nbsp;&nbsp;&nbsp;•可依房號查看歷史<br/>
-    &nbsp;&nbsp;&nbsp;•左圖為橫向堆疊長條（左側房號、顏色＝主題）<br/>
-    &nbsp;&nbsp;&nbsp;•右為所選期間內每月實際客訴趨勢。<br/>
   </div>
 
 </body>

@@ -3128,6 +3128,38 @@ function updateLangUI(){
     btn.setAttribute("aria-pressed", on ? "true" : "false");
   }
 
+  function getNativeFullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+
+  function requestNativeFullscreen(el) {
+    if (!el) return Promise.resolve(false);
+    try {
+      if (typeof el.requestFullscreen === "function") {
+        return el.requestFullscreen({ navigationUI: "hide" }).then(function () { return true; }).catch(function () {
+          return el.requestFullscreen().then(function () { return true; }).catch(function () { return false; });
+        });
+      }
+      if (typeof el.webkitRequestFullscreen === "function") {
+        try { el.webkitRequestFullscreen(); return Promise.resolve(true); } catch (e0) { return Promise.resolve(false); }
+      }
+    } catch (e) {}
+    return Promise.resolve(false);
+  }
+
+  function exitNativeFullscreen() {
+    try {
+      if (!getNativeFullscreenElement()) return Promise.resolve();
+      if (typeof document.exitFullscreen === "function") {
+        return document.exitFullscreen().catch(function () {});
+      }
+      if (typeof document.webkitExitFullscreen === "function") {
+        try { document.webkitExitFullscreen(); } catch (e1) {}
+      }
+    } catch (e) {}
+    return Promise.resolve();
+  }
+
   function setTrendFullscreen(on) {
     const card = document.querySelector(".chart-right");
     if (!card) return;
@@ -3136,11 +3168,22 @@ function updateLangUI(){
     card.classList.toggle("trend-fs", want);
     document.body.classList.toggle("trend-fs-open", want);
     updateTrendFullscreenButtonUI();
+
     if (want) {
-      // 進全螢幕直接拉滿
+      // 進全螢幕直接拉滿；並盡量用原生 Fullscreen 收起網址列（失敗則仍用 CSS 全螢幕）
       window._trendCardCustomHeight = Math.floor(window.innerHeight || 0);
+      window._trendFsIgnoreNativeEvent = true;
+      requestNativeFullscreen(document.documentElement).then(function () {
+        window._trendFsIgnoreNativeEvent = false;
+        try { window.scrollTo(0, 1); } catch (e2) {}
+        bumpRevenueChartsSoon();
+      });
       bumpRevenueChartsSoon();
     } else if (wasOn) {
+      window._trendFsIgnoreNativeEvent = true;
+      exitNativeFullscreen().then(function () {
+        window._trendFsIgnoreNativeEvent = false;
+      });
       restoreTrendChartAspectAfterFullscreen();
       bumpRevenueChartsSoon();
     } else {
@@ -3158,6 +3201,21 @@ function updateLangUI(){
       setTrendFullscreen(!card.classList.contains("trend-fs"));
     });
     btn._fsBound = true;
+
+    // 系統手勢離開原生全螢幕時，同步關掉 CSS 全螢幕
+    if (!window._trendFsNativeBound) {
+      const onNativeFs = function () {
+        if (window._trendFsIgnoreNativeEvent) return;
+        const card = document.querySelector(".chart-right");
+        if (!card) return;
+        if (!getNativeFullscreenElement() && card.classList.contains("trend-fs")) {
+          setTrendFullscreen(false);
+        }
+      };
+      document.addEventListener("fullscreenchange", onNativeFs);
+      document.addEventListener("webkitfullscreenchange", onNativeFs);
+      window._trendFsNativeBound = true;
+    }
 
     // 轉回直向時自動離開全螢幕
     if (!window._trendFsOrientBound && typeof window.matchMedia === "function") {
@@ -5776,74 +5834,75 @@ function updateLangUI(){
     render();
   });
 
-  // 手機版：折線圖左右滑切期間；單指上下拖調卡片高度
+  // 手機版：單指左右滑切期間；兩指上下滑調卡片高度（避免跟捲動／下拉更新衝突）
   if (trendCard) {
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartTime = 0;
-    let touchWasMulti = false;
-    let resizeMode = false;      // 已判定為上下拖調高度
-    let swipeLocked = false;     // 已判定為左右滑
+    let pinchResize = false;     // 兩指調高度中
+    let didPinchResize = false;
     let startCardH = 0;
+    let pinchStartMidY = 0;
+
+    function touchMidY(touches) {
+      if (!touches || touches.length < 2) return 0;
+      return (touches[0].clientY + touches[1].clientY) / 2;
+    }
 
     trendCard.addEventListener('touchstart', (e) => {
-      touchWasMulti = !!(e.touches && e.touches.length > 1);
-      resizeMode = false;
-      swipeLocked = false;
+      const n = e.touches ? e.touches.length : 0;
+      if (n >= 2) {
+        pinchResize = true;
+        didPinchResize = false;
+        pinchStartMidY = touchMidY(e.touches);
+        startCardH = Math.round(trendCard.getBoundingClientRect().height || 0);
+        return;
+      }
+      // 單指：只記左右滑，不調高度
+      pinchResize = false;
       const t = e.touches[0];
       touchStartX = t.clientX;
       touchStartY = t.clientY;
       touchStartTime = Date.now();
-      startCardH = Math.round(trendCard.getBoundingClientRect().height || 0);
     }, { passive: true });
 
     trendCard.addEventListener('touchmove', (e) => {
-      if (e.touches && e.touches.length > 1) {
-        touchWasMulti = true;
-        resizeMode = false;
+      const n = e.touches ? e.touches.length : 0;
+      if (n >= 2) {
+        if (!pinchResize) {
+          pinchResize = true;
+          pinchStartMidY = touchMidY(e.touches);
+          startCardH = Math.round(trendCard.getBoundingClientRect().height || 0);
+        }
+        const midY = touchMidY(e.touches);
+        const dy = midY - pinchStartMidY;
+        // 兩指中點往下＝變高；全螢幕本來就拉滿，仍允許調整上限
+        const isFs = trendCard.classList.contains("trend-fs");
+        if (isFs) {
+          // 全螢幕維持填滿，不靠兩指改高度
+          if (e.cancelable) e.preventDefault();
+          return;
+        }
+        const maxH = Math.max(220, Math.floor(window.innerHeight * 0.92));
+        const nextH = Math.min(maxH, Math.max(160, startCardH + dy));
+        window._trendCardCustomHeight = nextH;
+        applyTrendCardCustomHeight();
+        didPinchResize = true;
+        if (e.cancelable) e.preventDefault();
         return;
       }
-      if (touchWasMulti || swipeLocked) return;
-      const t = e.touches[0];
-      if (!t) return;
-      const dx = t.clientX - touchStartX;
-      const dy = t.clientY - touchStartY;
-
-      // 尚未鎖定手勢：判斷上下拖 or 左右滑
-      if (!resizeMode) {
-        if (Math.abs(dy) < 14 && Math.abs(dx) < 14) return;
-        if (Math.abs(dx) > Math.abs(dy) * 1.15) {
-          swipeLocked = true;
-          return;
-        }
-        if (Math.abs(dy) > Math.abs(dx) * 1.05) {
-          resizeMode = true;
-        } else {
-          return;
-        }
-      }
-
-      // 上下拖：調高度（往下拖＝變高；全螢幕可拉滿整屏）
-      const isFs = trendCard.classList.contains("trend-fs");
-      const maxH = isFs
-        ? Math.floor(window.innerHeight)
-        : Math.max(220, Math.floor(window.innerHeight * 0.92));
-      const nextH = Math.min(maxH, Math.max(160, startCardH + dy));
-      window._trendCardCustomHeight = nextH;
-      applyTrendCardCustomHeight();
-      if (e.cancelable) e.preventDefault();
+      // 單指：不 preventDefault，讓瀏覽器正常捲動／不誤觸調高度
     }, { passive: false });
 
     trendCard.addEventListener('touchend', (e) => {
-      if (touchWasMulti || (e.touches && e.touches.length > 0)) {
-        touchWasMulti = false;
-        resizeMode = false;
-        swipeLocked = false;
-        return;
-      }
-      if (resizeMode) {
-        resizeMode = false;
-        swipeLocked = false;
+      if (pinchResize || didPinchResize || (e.touches && e.touches.length > 0)) {
+        if (!e.touches || e.touches.length < 2) {
+          pinchResize = false;
+        }
+        if (!e.touches || e.touches.length === 0) {
+          didPinchResize = false;
+          pinchResize = false;
+        }
         return;
       }
 
@@ -5852,7 +5911,7 @@ function updateLangUI(){
       const dy = t.clientY - touchStartY;
       const dt = Date.now() - touchStartTime;
 
-      // 基本條件：時間不要太久、位移夠大且主要是左右滑
+      // 單指左右滑切期間
       if (dt > 600) return;
       if (Math.abs(dx) < 40) return;
       if (Math.abs(dx) < Math.abs(dy)) return;

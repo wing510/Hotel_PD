@@ -1,0 +1,9 @@
+# 本機／敏感資料不推上公開 GitHub Pages
+doc/*.csv
+.env
+.env.*
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

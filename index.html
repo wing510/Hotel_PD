@@ -1,0 +1,5399 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HOTEL_PDv47</title>
+
+  <!-- Chart.js 3.9；長條數字改自寫 plugin，不再用 chartjs-plugin-datalabels（file://／resize 易觸發 _listened／_labels 錯誤） -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+  <style>
+    /* 全域字型與頁面設定 */
+body { 
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans", sans-serif;
+  background: #0f172a;       /* 深靛藍背景 */
+  color: #111827;
+}
+
+/* 頁首 header 區域 */
+header { 
+  padding: 18px 0;
+  border-bottom: 1px solid rgba(148,163,184,0.4);
+  background: rgba(15,23,42,0.96);   /* 深色半透明 */
+  backdrop-filter: blur(10px);       /* 玻璃感 */
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 10px 30px rgba(15,23,42,0.5);
+}
+
+
+    /* wrap：最大寬度限制，置中 */
+.wrap { 
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 18px 20px;
+  box-sizing: border-box;
+}
+
+/* 營收／客訴：小分頁，與「酒店業績儀表板」同一列、緊貼標題右側 */
+.main-tabs {
+  display: inline-flex;
+  width: auto;
+  max-width: 100%;
+  gap: 4px;
+  margin: 0;
+  padding: 0 0 0 10px;
+  border: none;
+  border-left: 1px solid rgba(148,163,184,0.28);
+  background: transparent;
+  box-sizing: border-box;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  align-items: center;
+}
+.main-tab {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 5px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+  background: rgba(15,23,42,0.65);
+  border: 1px solid rgba(148,163,184,0.35);
+  border-radius: 6px;
+  cursor: pointer;
+  box-sizing: border-box;
+  line-height: 1.25;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+.main-tab:hover {
+  color: #e5e7eb;
+  background: rgba(30,41,59,0.85);
+  border-color: rgba(148,163,184,0.5);
+}
+.main-tab:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+.main-tab.main-tab--active {
+  color: #f8fafc;
+  background: rgba(51,65,85,0.95);
+  border-color: rgba(186,230,253,0.45);
+}
+.main-tab-panel[hidden] {
+  display: none !important;
+}
+
+    /* 頂端列：三條槓 + 標題 + 營收／客訴分頁（同一列，窄螢幕可換行） */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px 10px;
+      margin-bottom: 10px;
+    }
+    .top-bar h1 {
+      flex: 0 1 auto;
+      min-width: 0;
+    }
+
+/* 標題字型大小 */
+h1 { 
+  font-size: 20px;
+font-weight: 600;
+  margin: 0;
+  flex: 1;
+  color: #e5e7eb;               /* 淺色字 */
+  letter-spacing: 0.04em;
+}
+
+
+/* 三條槓按鈕 */
+.menu-toggle {
+  display: none; 
+  flex-direction: column;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  box-sizing: border-box;
+  cursor: pointer;
+  
+  /* 讓內容上下左右置中 */
+  align-items: center;
+  justify-content: center;
+  background: transparent;  
+  border: none; 
+  box-shadow: none; 
+}
+
+.menu-toggle span {
+  display: block;
+  height: 2px;
+  background: #e5e7eb;
+  margin: 2px 0;      
+  
+  border-radius: 1px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.menu-toggle span:nth-child(1),
+.menu-toggle span:nth-child(2),
+.menu-toggle span:nth-child(3) {
+  width: 14px !important;
+}
+
+    /* 開啟狀態的三條槓變成 X（可有可無） */
+    body.menu-open .menu-toggle span:nth-child(1) {
+      transform: translateY(5px) rotate(45deg);
+    }
+    body.menu-open .menu-toggle span:nth-child(2) {
+      opacity: 0;
+    }
+    body.menu-open .menu-toggle span:nth-child(3) {
+      transform: translateY(-5px) rotate(-45deg);
+    }
+
+    /* 篩選器區域：設定 6 欄格局，並加上間距 */
+    .filters { 
+      display: grid;
+      /* 桌機：依實際項目數自動平均分配寬度 */
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    /* 篩選器內每個卡片 */
+.card { 
+  background: radial-gradient(circle at top, #0b1220 0, #020617 55%, #020617 100%);
+  border: 1px solid rgba(148,163,184,0.35);
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 10px 30px rgba(15,23,42,0.55);
+}
+
+    /* 卡片內的標籤文字 */
+label { 
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9ca3af;
+  margin: 0 0 6px;
+}
+
+/* 下拉選單 */
+select {
+  width: 100%;
+  /* 關掉白底，直接用純深色 */
+  background-color: #020617;
+  background-image: none;
+  color: #e5e7eb;
+  border: 1px solid rgba(148,163,184,0.6);
+  border-radius: 999px;
+  padding: 6px 12px;
+  height: 36px;
+  font-size: 13px;
+  line-height: 1.2;
+  appearance: none;  /* 隱藏系統預設樣式（含白底邊框） */
+  outline: none;
+  box-shadow: 0 4px 10px rgba(15,23,42,0.6);
+}
+
+/* 下拉選單展開後的每一個選項 */
+select option {
+  background-color: #020617;
+  color: #e5e7eb;
+}
+    /* 表格 */
+table { 
+  width: 100%;
+  border-collapse: collapse;
+  background: #020617;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(148,163,184,0.4);
+  margin-top: 14px;
+}
+
+/* 表頭 thead 樣式 */
+thead th { 
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  color: #e5e7eb;
+  background: radial-gradient(circle at top, #111827 0, #020617 60%);
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(55,65,81,0.9);
+}
+
+/* 表格內容列 tbody */
+tbody td { 
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(31,41,55,0.85);
+  font-size: 12px;
+  color: #e5e7eb;
+}
+
+/* 隔行底色 */
+tbody tr:nth-child(odd) {
+  background: rgba(15,23,42,0.8);
+}
+tbody tr:nth-child(even) {
+  background: rgba(15,23,42,0.6);
+}
+
+/* 計算欄位 calc 樣式 */
+td.calc {
+  background: rgba(56,189,248,0.1);
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+/* hover */
+tbody tr:hover { 
+  background: rgba(15,23,42,0.95);
+}
+
+/* 表尾 (tfoot) 樣式 */
+tfoot td { 
+  padding: 9px 10px;
+  background: #020617;
+  color: #f9fafb;
+  border-top: 1px solid rgba(148,163,184,0.7);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* 數字欄位靠右對齊 */
+td.num, th.num { 
+  text-align: right;
+}
+
+
+    /* 備註區 note */
+    .note { 
+      margin-top: 8px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    /* charts 區域：左右並排 */
+    .charts { 
+      display: flex;
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+.chart-left, 
+.chart-right { 
+  border-radius: 18px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  background: radial-gradient(circle at top, #020617 0, #020617 55%, #020617 100%);
+  border: 1px solid rgba(148,163,184,0.45);
+  box-shadow: 0 20px 45px rgba(15,23,42,0.9);
+  box-sizing: border-box; /* 避免手機寬度 + padding 溢出被切 */
+}
+
+.chart-left { 
+  flex: 3;
+  order: 1;
+  /* 圓餅圖卡片上下留白縮小一點 */
+  padding-top: 10px;
+  padding-bottom: 10px;
+  position: relative;
+}
+
+.chart-right { 
+  flex: 6;
+  order: 2;
+}
+
+/* 左側圓餅收合：右側趨勢圖佔滿 */
+.charts.pie-collapsed {
+  gap: 10px;
+}
+.charts.pie-collapsed .chart-left {
+  flex: 0 0 auto;
+  width: 42px;
+  min-width: 42px;
+  max-width: 42px;
+  padding: 10px 6px;
+  align-items: center;
+  overflow: hidden;
+}
+.charts.pie-collapsed .chart-left .chart-titles,
+.charts.pie-collapsed .chart-left canvas {
+  display: none !important;
+}
+.charts.pie-collapsed .chart-right {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+.chart-left-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+.charts.pie-collapsed .chart-left-tools {
+  justify-content: center;
+  margin-bottom: 0;
+}
+.pie-collapse-btn {
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.55);
+  background: rgba(2,6,23,0.75);
+  color: #e5e7eb;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  box-shadow: 0 6px 14px rgba(15,23,42,0.55);
+}
+.pie-collapse-btn:hover {
+  background: rgba(30,41,59,0.95);
+  border-color: rgba(56,189,248,0.55);
+}
+@media (max-width: 768px) {
+  .charts.pie-collapsed {
+    flex-direction: row !important;
+    align-items: stretch;
+  }
+  .charts.pie-collapsed .chart-left {
+    order: 0 !important;
+    flex: 0 0 auto !important;
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    padding: 8px 4px !important;
+  }
+  .charts.pie-collapsed .chart-right {
+    order: 1 !important;
+    flex: 1 1 auto !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+}
+
+/* 圖表標題文字 */
+.chart-left h2, .chart-right h2 { 
+  font-size: 14px;
+  margin: 4px 0 10px;
+  text-align: center;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.chart-subtitle{
+  margin: 0;
+  font-size: 12px;
+  color: rgba(148,163,184,0.95);
+  line-height: 1.2;
+  white-space: normal;
+  text-align: center;
+}
+
+/* (reverted) pie HTML legend removed */
+    /* 圓餅圖 canvas 自適應 */
+    .chart-left canvas {
+      width: 100% !important;   /* 寬度隨容器調整 */
+      height: auto !important;  /* 高度保持比例 */
+      max-width: none;          /* 不限制最大寬度 */
+    }
+
+    /* 圓餅圖高度：桌機不要固定，避免比例怪 */
+
+    /* 折線圖 canvas 自適應（讓 Chart.js 控制高度比例）*/
+    .chart-right canvas {
+      width: 100% !important;
+      /* 刪掉 height: auto !important; */
+    }
+
+    /* 圖表標題文字 */
+    .chart-left h2, .chart-right h2 { 
+      font-size: 16px;
+      margin: 6px 0;
+    }
+    .chart-left h2 {
+      text-align: left;
+    }
+    .chart-right h2 {
+      text-align: center;
+    }
+
+    /* 載入中遮罩層：深色版 */
+#loadingOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15,23,42,0.96);      /* 深藍透明 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;                         /* 比 header 再高一點 */
+}
+
+/* 載入方塊內容 */
+.loadingBox { 
+  text-align: center; 
+  font-size: 15px; 
+  color: #e5e7eb;                        /* 淺字 */
+}
+
+/* 進度條外框 */
+.progress-bar {
+  margin-top: 10px;
+  width: 220px;
+  height: 10px;
+  background: rgba(30,64,175,0.5);       /* 深藍 */
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+/* 進度條填充 */
+.progress-fill {
+  width: 0%;   /* 預設 0% */
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #22c55e);  /* 藍綠漸層 */
+  animation: fillBar 2.5s forwards;
+}
+
+
+    /* 動畫 keyframes：從 0% → 100% */
+    @keyframes fillBar {
+      from { width: 0%; }
+      to   { width: 100%; }
+    }
+
+    /* 自訂下拉 + checkbox 清單 */
+    .dropdown { position: relative; }
+    .dropdown button {
+  width: 100%;
+  background: linear-gradient(135deg, #020617 0, #020617 60%, #020617 100%);
+  border: 1px solid rgba(148,163,184,0.6);
+  border-radius: 999px;
+  padding: 6px 12px;
+  height: 36px;
+  font-size: 13px;
+  line-height: 1.2;
+  text-align: left;
+  color: #e5e7eb;
+  box-shadow: 0 6px 18px rgba(15,23,42,0.7);
+}
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #020617;
+  border: 1px solid rgba(148,163,184,0.65);
+  border-radius: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 20;
+  box-shadow: 0 18px 40px rgba(15,23,42,0.9);
+}
+.dropdown-content label {
+  display: block;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: #e5e7eb;
+}
+.dropdown-content label:hover {
+  background: rgba(148,163,184,0.16);
+}
+
+    .dropdown-content label {
+      display: block;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    .dropdown.show .dropdown-content { display: block; }
+
+    .dropdown-content.period-panel {
+      /* 期間面板：加長（可視高度更大）、也稍加寬避免擁擠 */
+      max-height: min(78vh, 560px);
+      min-width: 240px;
+      right: auto;
+      padding: 8px 10px;
+    }
+    .period-section { margin-bottom: 10px; }
+    .period-h {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .period-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .period-row.period-year-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .period-row label {
+      display: flex !important;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .period-row input[type="month"] {
+      color: #e5e7eb;
+      background: #0f172a;
+      border: 1px solid rgba(148,163,184,0.5);
+      border-radius: 8px;
+      padding: 5px 8px;
+      font-size: 12px;
+    }
+    .period-row input[type="number"] {
+      color: #e5e7eb;
+      background: #0f172a;
+      border: 1px solid rgba(148,163,184,0.5);
+      border-radius: 8px;
+      padding: 5px 8px;
+      font-size: 12px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .period-clear {
+      margin-top: 8px;
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.55);
+      background: transparent;
+      color: #e5e7eb;
+      cursor: pointer;
+    }
+    .period-clear:hover {
+      background: rgba(148,163,184,0.12);
+    }
+    .period-clear-row{
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .period-clear-row .period-clear{
+      flex: 1 1 0;
+      margin-top: 0;
+      padding: 5px 10px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .period-divider {
+      height: 1px;
+      background: rgba(148,163,184,0.22);
+      margin: 10px 0;
+    }
+    .period-hint {
+      font-size: 10px;
+      color: #64748b;
+      margin: 0 0 8px 0;
+      line-height: 1.35;
+    }
+    .period-check-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 10px;
+    }
+    .period-check-grid label {
+      display: inline-flex !important;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 6px !important;
+      border-radius: 6px;
+    }
+
+    /* 月份複選：固定一行 3 個，避免面板過寬 */
+    #monthCheckList.period-check-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px 10px;
+    }
+    #monthCheckList.period-check-grid label {
+      width: 100%;
+      justify-content: flex-start;
+      white-space: nowrap; /* 10-12 月兩位數不換行 */
+    }
+
+    /* 手機版：期間面板不要超出側邊欄 */
+    @media (max-width: 768px) {
+      .dropdown-content.period-panel {
+        min-width: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-width: 100%;
+        max-height: 78vh;
+        box-sizing: border-box;
+      }
+      .period-row input[type="month"] {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .period-check-grid label {
+        padding: 4px 6px !important;
+      }
+    }
+
+    /* 手機版：側邊欄遮罩（點一下可以關閉菜單） */
+    #sideOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 800;  /* 在 main 上面、header 下面 */
+    }
+
+/* 手機專用按鈕：預設隱藏，手機才顯示 */
+.mobile-only {
+  display: none;
+}
+
+/* 手機版：其他欄位預設隱藏，展開時顯示 */
+
+/* X 關閉按鈕：預設桌機不顯示 */
+.close-filter-btn {
+  display: none;
+}
+
+/* 手機版側邊欄右上角的 X */
+@media (max-width: 768px) {
+  .close-filter-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 16px;
+    right: 14px;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    border: 1px solid rgba(148,163,184,0.5);
+    background: rgba(2,6,23,0.9);
+    color: #e5e7eb;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.45);
+    z-index: 1300;
+  }
+
+  .close-filter-btn:hover {
+    background: rgba(30,41,59,0.9);
+  }
+}
+@media (max-width: 768px) {
+  .mobile-only {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(148,163,184,0.7);
+    background: radial-gradient(circle at top, #020617 0, #020617 60%, #020617 100%);
+    color: #e5e7eb;
+    font-size: 12px;
+    box-shadow: 0 8px 20px rgba(15,23,42,0.9);
+  }
+
+  .mobile-extra {
+    display: none;
+  }
+
+  body.show-more-cols .mobile-extra {
+    display: table-cell;
+  }
+}
+
+
+    /* === 手機板調整 === */
+    @media (max-width: 768px) {
+      header {
+        padding: 6px 0;
+      }
+
+      .wrap {
+        padding: 10px 12px;
+      }
+      header .wrap {
+        padding-top: 6px;
+        padding-bottom: 4px;
+      }
+      main.wrap {
+        padding-top: 6px;
+      }
+      .top-bar {
+        margin-bottom: 0;
+      }
+      .main-tabs {
+        padding-left: 8px;
+        border-left-color: rgba(148,163,184,0.22);
+      }
+      .main-tab {
+        padding: 4px 10px;
+        font-size: 13px;
+      }
+      .top-bar {
+        margin-bottom: 8px;
+      }
+
+      /* 三條槓在手機顯示 */
+      .menu-toggle {
+        display: inline-flex;
+      }
+
+      /* charts 區域上下堆疊 */
+      .charts { 
+        flex-direction: column; 
+      }
+
+      /* 折線圖在上，單獨佔一列，避免被壓縮 */
+      .chart-right {
+        order: 1;
+        flex: none;
+        width: 100%;
+        max-width: 100%;
+        margin: 0 auto;
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+      .chart-right canvas { width: 100% !important; }
+
+      /* 圓餅圖在下，縮小置中 */
+      .chart-left {
+        order: 2;
+        flex: none;
+        width: 100%;
+        max-width: 100%;
+        margin: 0 auto;
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+      }
+      #pieChart{ height: 200px !important; }
+
+      /* 標題字體縮小 */
+      h1 {  
+        font-size: 18px; 
+      }
+      .chart-left h2,
+      .chart-right h2{
+        font-size: 13px !important;
+        text-align: center !important;
+        margin: 4px 0 6px !important;
+        letter-spacing: 0.06em;
+      }
+      .chart-titles h2{
+        text-align: center !important;
+      }
+      .chart-subtitle{
+        font-size: 11px;
+        margin-bottom: 8px;
+        text-align: center;
+      }
+
+      /* 表格字體縮小 */
+      table th, table td {  
+        font-size: 11px;  
+        padding: 6px; 
+      }
+
+      /* 下拉選單按鈕縮小 */
+      .dropdown button {
+        font-size: 13px;
+        padding: 6px 8px;
+      }
+
+/* 手機：filters 變成左側滑出的深色側邊欄 */
+.filters {
+  position: fixed;
+  top: 0;
+  left: -340px;          /* 預設藏在左邊（要 >= width） */
+  width: 320px;
+  height: 100vh;
+  background: radial-gradient(circle at top, #020617 0, #020617 55%, #020617 100%);
+  box-shadow: 2px 0 24px rgba(15,23,42,0.95);
+  padding: 60px 12px 16px 12px;  /* 上方留位置給 header */
+  box-sizing: border-box;
+  grid-template-columns: 1fr;    /* 一欄直排 */
+  gap: 10px;
+  overflow-y: auto;
+  z-index: 1001;
+}
+
+
+      /* 開啟側邊欄時，滑出來 */
+      body.menu-open .filters {
+        left: 0;
+        transition: left 0.2s ease-out;
+      }
+
+      /* 開啟時顯示遮罩 */
+      body.menu-open #sideOverlay {
+        display: block;
+      }
+  /* 手機版：filters 裡的每一格變成扁平樣式，不要卡片 */
+  .filters .card {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 4px 0 8px 0;
+  }
+
+  .filters label {
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+
+  .filters select,
+  .filters .dropdown button {
+    border-radius: 8px;    /* 手機改成方圓角，比膠囊更省空間 */
+    box-shadow: none;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  /* 再縮小手機側邊欄的間距 & 高度 */
+  .filters {
+    gap: 8px !important;           /* 每個項目上下 8px */
+    padding-top: 70px !important;  /* 頂部給標題 & X 的空間 */
+  }
+
+  .filters .card {
+    padding: 0 !important;         /* 取消 card 額外 padding */
+    margin: 0 !important;
+  }
+
+  .filters label {
+    margin-bottom: 2px !important; /* label 跟選單更貼近一點 */
+  }
+
+  .filters select,
+  .filters .dropdown button {
+    padding: 4px 10px !important;  /* 選單高度變矮 */
+    font-size: 12px !important;
+  }
+
+    }
+  
+/* === 手機版：縮短側邊欄各選單的間距（直排） === */
+@media (max-width: 768px) {
+
+  /* 整個側邊欄的間距縮到最小 */
+  .filters {
+    gap: 10px !important;       /* 每個項目之間上下約 10px */
+    padding-top: 70px !important;
+  }
+
+  /* 完全去除卡片額外空間（真正讓排版變緊） */
+  .filters .card {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* label 與 select 的距離變最小 */
+  .filters label {
+    margin-bottom: 3px !important;
+    font-size: 12px !important;
+  }
+
+  /* 下拉選單高度縮小、上下面更貼 */
+  .filters select,
+  .filters .dropdown button {
+    padding: 6px 10px !important;   /* 短、薄 */
+    height: 34px !important;        /* 固定高度，不會再拉太長 */
+    font-size: 13px !important;
+    border-radius: 8px !important;
+  }
+}
+
+/* === 手機版：極縮短側邊欄空白（每項目距離 ≈ 4px）=== */
+@media (max-width: 768px) {
+
+  /* 每個選單之間只留 4px */
+  .filters {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;   /* ← 這裡才是關鍵 */
+    padding-top: 70px !important;
+  }
+
+  /* 不要 card padding/margin，避免撐開 */
+  .filters .card {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* label 與選單距離縮到最小 */
+  .filters label {
+    margin: 0 0 2px 0 !important;   /* 上0px，下2px */
+    padding: 0 !important;
+    line-height: 1.1 !important;
+  }
+
+  /* select 實際高度縮小 */
+  .filters select,
+  .filters .dropdown button {
+    padding: 4px 8px !important;  /* 很薄 */
+    height: 30px !important;      /* 統一固定高度 */
+    font-size: 12px !important;
+    line-height: 1 !important;
+    border-radius: 6px !important;
+  }
+
+  /* 下拉選單的 checkbox 列表也縮小 */
+  
+}
+
+
+/* === 手機版：每組之間保留「一行空白」的間隔 === */
+@media (max-width: 768px) {
+
+  /* 整體：一欄直排，每組之間約一行距離 */
+  .filters {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;          /* 視覺上一行的空白 */
+    padding-top: 70px !important;
+  }
+
+  /* 每一組（年份、月份、貨幣...）自己不要再加額外空白，只處理 label + select */
+  .filters .card {
+    display: flex !important;
+    flex-direction: column !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* label 緊貼上方，下面只留一點點距離給選單 */
+  .filters label {
+    margin: 0 0 2px 0 !important;
+    padding: 0 !important;
+    line-height: 1.1 !important;
+  }
+
+  /* select 本身不要有額外 margin，高度適中 */
+  .filters select,
+  .filters .dropdown button {
+    margin: 0 !important;
+    padding: 5px 10px !important;
+    height: 32px !important;
+    font-size: 13px !important;
+    line-height: 1 !important;
+    border-radius: 6px !important;
+  }
+
+  /* 下拉內容的 checkbox 也小一點 */
+  .dropdown-content label {
+    padding: 4px 6px !important;
+    font-size: 12px !important;
+  }
+}
+
+
+/* 折線圖卡片標題列與左右箭頭 */
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.chart-titles{
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-titles h2{
+  margin: 0 0 6px;
+  text-align: center;
+}
+
+.chart-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mode-toggle {
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.6);
+  background: transparent;
+  color: #e5e7eb;
+  font-size: 11px;
+  padding: 0 10px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(15,23,42,0.7);
+}
+
+.nav-btn {
+  border: 1px solid rgba(148,163,184,0.6);
+  background: rgba(15,23,42,0.9);
+  color: #e5e7eb;
+  border-radius: 999px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 0 4px 12px rgba(15,23,42,0.9);
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.nav-btn:hover {
+  background: rgba(30,64,175,0.95);
+  box-shadow: 0 6px 16px rgba(15,23,42,0.95);
+  transform: translateY(-1px);
+}
+
+.nav-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* 桌機專用箭頭（手機隱藏） */
+.desktop-only {
+  display: inline-flex;
+}
+
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none;
+  }
+
+  /* 手機上允許 chart-right 垂直捲動 + 水平滑動偵測 */
+  .chart-right {
+    touch-action: pan-y;
+  }
+}
+
+/* 手機版：更多欄位 + 月份/年份箭頭列 */
+@media (max-width: 768px) {
+}
+
+/* 表格上方：More Columns + 年/月 + 左右箭頭 列 */
+.table-nav-bar {
+  margin: 10px 0 6px;
+}
+
+.table-nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* 左：欄位按鈕，右：Y/‹/› */
+  gap: 8px;
+}
+
+/* 客訴／維修區（不另加分隔線與大標題，僅保留下拉） */
+.complaints-section {
+  margin-top: 12px;
+  padding-top: 0;
+  border-top: none;
+}
+.complaints-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  margin-bottom: 12px;
+}
+.complaints-toolbar .field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+  min-width: 120px;
+}
+/* 房號下拉盡量短，把橫向空間留給主題（避免主題一長就換行） */
+.complaints-toolbar .field.field-complaint-room {
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 6.75rem;
+}
+.complaints-toolbar .field.field-complaint-room select {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+.complaints-toolbar .field.field-complaint-subject {
+  flex: 1 1 140px;
+  min-width: 0;
+  max-width: 100%;
+}
+.complaints-toolbar .field.field-complaint-subject select {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+@media (min-width: 400px) {
+  .complaints-toolbar {
+    flex-wrap: nowrap;
+  }
+}
+.complaints-toolbar select {
+  min-width: 140px;
+}
+.complaints-toolbar-table {
+  margin-top: 2px;
+  margin-bottom: 12px;
+}
+.complaints-table-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  margin-bottom: 10px;
+}
+.complaints-table-tools .chk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #e5e7eb;
+  cursor: pointer;
+  user-select: none;
+}
+.complaints-table-tools .chk input {
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+.complaints-table-tools .search {
+  flex: 1 1 240px;
+  min-width: 200px;
+  max-width: 520px;
+}
+.complaints-table-tools .search input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(148,163,184,0.45);
+  background: rgba(2,6,23,0.65);
+  color: #e5e7eb;
+  outline: none;
+}
+.complaints-table-tools .search input::placeholder {
+  color: rgba(148,163,184,0.95);
+}
+.complaints-table-tools .search input:focus {
+  border-color: rgba(56,189,248,0.75);
+  box-shadow: 0 0 0 3px rgba(56,189,248,0.18);
+}
+.complaints-warn {
+  font-size: 12px;
+  color: #fcd34d;
+  background: rgba(251,191,36,0.08);
+  border: 1px solid rgba(251,191,36,0.35);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+.complaints-meta {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 12px;
+}
+.complaints-charts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: stretch;
+}
+@media (min-width: 769px) {
+  /* 靠上對齊：若與長條圖並列，折線卡片不會在「整列高度」裡垂直置中，外側上下不留大塊空 */
+  .complaints-charts {
+    align-items: flex-start;
+  }
+}
+.complaints-charts .compl-chart-card {
+  flex: 1 1 280px;
+  min-width: 0;
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: radial-gradient(circle at top, #020617 0, #020617 55%, #020617 100%);
+  border: 1px solid rgba(148,163,184,0.45);
+  box-shadow: 0 14px 36px rgba(15,23,42,0.85);
+  box-sizing: border-box;
+}
+/* 與上方 .chart-right h2「營收/指標趨勢」同級視覺：桌機 16px、手機見下方 media */
+.complaints-charts .compl-chart-card h3 {
+  font-size: 16px;
+  margin: 6px 0;
+  text-align: center;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+.complaint-line-titles .chart-subtitle {
+  margin-bottom: 6px;
+}
+/*
+ * 客訴 canvas 不要用 width:100% !important：會蓋掉 Chart.js 的 inline 尺寸。
+ * 橫向長條圖 maintainAspectRatio:false 在 iOS 上常因此算出高度 0 → 整張不見。
+ */
+.complaints-charts canvas {
+  display: block;
+  max-width: 100%;
+}
+/* 手機：外層限高 + 直向捲動，內層 canvas 可依房數變高，列才不會被壓成 1px */
+.complaint-bar-viewport {
+  width: 100%;
+  box-sizing: border-box;
+}
+@media (max-width: 768px) {
+  .complaint-bar-viewport {
+    max-height: min(60vh, 600px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+    border: 1px solid rgba(148,163,184,0.28);
+    background: rgba(2,6,23,0.4);
+  }
+}
+/* 橫向堆疊長條：高度由 JS 依房數設定 */
+.complaint-bar-host {
+  width: 100%;
+  position: relative;
+  min-height: 200px;
+  flex-shrink: 0;
+}
+@media (min-width: 769px) {
+  .complaint-bar-host {
+    min-height: 110px;
+  }
+  .complaints-charts .compl-chart-card.complaint-bar-card {
+    padding: 6px 8px;
+  }
+  .complaints-charts .compl-chart-card.complaint-bar-card h3 {
+    margin-bottom: 2px;
+  }
+}
+.complaints-charts .compl-chart-card.complaint-bar-card canvas {
+  max-height: none;
+}
+/* Android：橫向長條常需明確寬度，否則 clientWidth 為 0 → Chart 不畫；勿對折線圖用 height:!important */
+@media (max-width: 768px) {
+  .complaint-bar-host canvas {
+    width: 100% !important;
+    max-width: 100%;
+  }
+}
+/* 折線圖：外層給穩定寬高，避免 iOS flex + 置中導致 canvas 有效高度為 0 */
+.complaint-trend-host {
+  width: 100%;
+  position: relative;
+  box-sizing: border-box;
+}
+/* 折線圖卡片：改為靠上對齊，避免置中壓扁圖表區 */
+.complaints-charts .compl-chart-card.complaint-line-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+@media (min-width: 769px) {
+  /* 高度交給 Chart 依 aspectRatio 計算，勿強制 min-height，否則圖例下方易多出一段空白 */
+  .complaints-charts .compl-chart-card.complaint-line-card .complaint-trend-host canvas {
+    max-height: 260px;
+  }
+}
+@media (max-width: 768px) {
+  .complaint-trend-host {
+    min-height: 0;
+  }
+}
+#complaintsTableWrap {
+  overflow-x: auto;
+  border-radius: 16px;
+  border: 1px solid rgba(148,163,184,0.4);
+}
+#complaintsTable {
+  margin-top: 0;
+}
+#complaintsTable th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+#complaintsTable th.sortable .si {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  color: #94a3b8;
+  opacity: 0.95;
+}
+#complaintsTable th.sortable.active .si {
+  color: #38bdf8;
+}
+
+#dataTable th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+#dataTable th.sortable .si {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  color: #94a3b8;
+  opacity: 0.95;
+}
+#dataTable th.sortable.active .si {
+  color: #38bdf8;
+}
+
+/* 期間同樣風格：客訴區間面板 */
+.dropdown-content.complaint-filter-panel {
+  max-height: min(70vh, 360px);
+  min-width: 260px;
+  right: auto;
+  padding: 10px 10px 12px;
+}
+.complaint-filter-panel .period-h {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.complaint-filter-panel .complaint-range-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+.complaint-filter-panel .complaint-range-row input {
+  color: #e5e7eb;
+  background: #0f172a;
+  border: 1px solid rgba(148,163,184,0.5);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.complaint-filter-panel .complaint-range-row input:focus {
+  outline: none;
+  border-color: rgba(56,189,248,0.75);
+  box-shadow: 0 0 0 3px rgba(56,189,248,0.18);
+}
+.complaint-filter-panel .complaint-clear-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.complaint-filter-panel .complaint-clear {
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.55);
+  background: transparent;
+  color: #e5e7eb;
+  cursor: pointer;
+}
+.complaint-filter-panel .complaint-clear:hover {
+  background: rgba(148,163,184,0.12);
+}
+@media (max-width: 768px) {
+  .dropdown-content.complaint-filter-panel {
+    /* 手機版：面板不要超出側邊欄（多組手機 CSS 互相覆蓋，這裡用 !important 定錨） */
+    min-width: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  /* 進一步保險：下拉內容不要突破側邊欄內距 */
+  .filters .dropdown .dropdown-content.complaint-filter-panel {
+    max-width: calc(100% - 0px) !important;
+  }
+  .complaint-filter-panel .complaint-range-row {
+    /* 手機仍維持左右並排 */
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 768px) {
+  .complaints-charts {
+    flex-direction: column;
+  }
+  /* 勿讓子卡片 flex-grow 吃滿區塊高度，否則折線圖卡片會被拉高、圖例底下出現一大塊空 */
+  .complaints-charts .compl-chart-card {
+    flex: 0 0 auto;
+    flex-shrink: 0;
+  }
+  .complaints-charts .compl-chart-card.complaint-line-card {
+    order: -1;
+  }
+  .complaint-bar-host {
+    min-height: 160px;
+  }
+  .complaints-charts .compl-chart-card.complaint-bar-card {
+    padding: 8px 10px;
+  }
+  /* 比照 .chart-left h2 / .chart-right h2 手機 13px */
+  .complaints-charts .compl-chart-card h3 {
+    font-size: 13px !important;
+    margin: 4px 0 6px !important;
+    letter-spacing: 0.06em;
+    text-align: center !important;
+  }
+}
+
+
+</style>
+</head>
+
+<body>
+  <!-- 手機版側邊欄遮罩 -->
+  <div id="sideOverlay"></div>
+
+  <!-- 載入中遮罩畫面 -->
+  <div id="loadingOverlay">
+    <div class="loadingBox">
+      <p>Loading...</p>
+      <div class="progress-bar">
+        <div class="progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap">
+      <!-- 上方一排：三條槓 + 標題 -->
+      <div class="top-bar">
+        <button class="menu-toggle" type="button" aria-label="Toggle filters">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <h1 id="pageTitle">酒店業績儀表板</h1>
+        <nav class="main-tabs" role="tablist" id="mainTabsNav" aria-label="儀表板分區">
+          <button type="button" class="main-tab main-tab--active" role="tab" id="mainTabRevenue" aria-selected="true" aria-controls="mainPanelRevenue" data-main-tab="revenue" tabindex="0">營收</button>
+          <button type="button" class="main-tab" role="tab" id="mainTabComplaints" aria-selected="false" aria-controls="mainPanelComplaints" data-main-tab="complaints" tabindex="-1">客訴</button>
+        </nav>
+      </div>
+
+      <!-- 篩選器區塊：桌機顯示在上方；手機會變成左側滑出菜單 -->
+      <div class="filters">
+        <!-- 手機版右上角關閉按鈕 X -->
+        <button class="close-filter-btn" type="button"
+                onclick="document.body.classList.remove('menu-open')">×</button>
+        <!-- 期間：起迄年月 + 年/月複選（同收入下拉） -->
+        <div class="card">
+          <label id="lblPeriod" for="periodBtn">期間</label>
+          <div class="dropdown" id="periodDropdown">
+            <button id="periodBtn" type="button">—</button>
+            <div id="periodPanel" class="dropdown-content period-panel">
+              <p class="period-hint" id="periodHint"></p>
+              <div class="period-section">
+                <div class="period-h" id="lblPeriodRange"></div>
+                <div class="period-row">
+                  <label><span id="lblPeriodStart"></span> <input type="month" id="periodStart" autocomplete="off"></label>
+                  <label><span id="lblPeriodEnd"></span> <input type="month" id="periodEnd" autocomplete="off"></label>
+                </div>
+                <button type="button" class="period-clear" id="periodRangeClear"></button>
+              </div>
+              <div class="period-divider"></div>
+              <div class="period-section">
+                <div class="period-h" id="lblPeriodYears"></div>
+                <div class="period-row period-year-row">
+                  <label><span id="lblPeriodYearStart"></span> <input type="number" id="periodYearStart" inputmode="numeric" min="1900" max="2100" step="1" placeholder="YYYY" autocomplete="off"></label>
+                  <label><span id="lblPeriodYearEnd"></span> <input type="number" id="periodYearEnd" inputmode="numeric" min="1900" max="2100" step="1" placeholder="YYYY" autocomplete="off"></label>
+                </div>
+                <div class="period-clear-row">
+                  <button type="button" class="period-clear" id="periodYearClear"></button>
+                  <button type="button" class="period-clear" id="periodMonthClear"></button>
+                </div>
+              </div>
+              <div class="period-section">
+                <div class="period-h" id="lblPeriodMonths"></div>
+                <div id="monthCheckList" class="period-check-grid"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 客訴篩選：像「期間」一樣點開面板 -->
+        <div class="card">
+          <label id="lblComplaintFilter" for="complaintFilterBtn"></label>
+          <div class="dropdown" id="complaintFilterDropdown">
+            <button id="complaintFilterBtn" type="button">—</button>
+            <div id="complaintFilterPanel" class="dropdown-content complaint-filter-panel">
+              <div class="period-section">
+                <div class="period-h" id="lblComplaintRoomRange"></div>
+                <div class="complaint-range-row">
+                  <input id="complaintRoomMin" inputmode="numeric" autocomplete="off" />
+                  <input id="complaintRoomMax" inputmode="numeric" autocomplete="off" />
+                </div>
+              </div>
+              <div class="period-divider"></div>
+              <div class="period-section">
+                <div class="period-h" id="lblComplaintCountRange"></div>
+                <div class="complaint-range-row">
+                  <input id="complaintCountMin" type="number" min="0" step="1" inputmode="numeric" autocomplete="off" />
+                  <input id="complaintCountMax" type="number" min="0" step="1" inputmode="numeric" autocomplete="off" />
+                </div>
+              </div>
+              <div class="complaint-clear-row">
+                <button type="button" class="complaint-clear" id="complaintFilterClear"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 貨幣選單 -->
+        <div class="card">
+          <label id="lblCurrency" for="currencyBtn">貨幣</label>
+          <div class="dropdown" id="currencyDropdown">
+            <button id="currencyBtn" type="button">—</button>
+            <div id="currencyList" class="dropdown-content"></div>
+          </div>
+          <select id="currencySel" hidden></select>
+        </div>
+
+        <!-- 收入選單（改成自訂下拉 + checkbox 清單） -->
+        <div class="card">
+          <label id="lblMetric">收入</label>
+          <div class="dropdown">
+            <button id="metricBtn" type="button">Choose</button>
+            <div id="metricList" class="dropdown-content"></div>
+          </div>
+        </div>
+
+        <!-- 指標（住房率% / 平均房價）自訂下拉 + checkbox 清單 -->
+        <div class="card">
+          <label id="lblMetric2">指標</label>
+          <div class="dropdown">
+            <button id="indBtn" type="button">Choose</button>
+            <div id="indList" class="dropdown-content"></div>
+          </div>
+        </div>
+
+        <!-- 語言選單 -->
+        <div class="card">
+          <label id="lblLang" for="langBtn">語言</label>
+          <div class="dropdown" id="langDropdown">
+            <button id="langBtn" type="button">—</button>
+            <div id="langList" class="dropdown-content"></div>
+          </div>
+          <select id="langSel" hidden>
+            <option value="zh">中</option>
+            <option value="en">Eng</option>
+            <option value="id">ID</option>
+          </select>
+        </div>
+      </div> <!-- end .filters -->
+    </div> <!-- end .wrap -->
+  </header>
+
+  <main class="wrap">
+    <div id="mainPanelRevenue" role="tabpanel" aria-labelledby="mainTabRevenue" class="main-tab-panel">
+    <!-- 圖表區 -->
+    <div class="charts">
+      <!-- 左側：圓餅圖 -->
+      <div class="chart-left">
+        <div class="chart-left-tools">
+          <button type="button" class="pie-collapse-btn" id="pieCollapseBtn" aria-expanded="true" title="收合">‹</button>
+        </div>
+        <div class="chart-titles">
+          <h2 id="titlePie">收入來源</h2>
+          <div id="subTitlePie" class="chart-subtitle"></div>
+        </div>
+        <canvas id="pieChart"></canvas>
+      </div>
+
+      <!-- 右側：折線圖 -->
+      <div class="chart-right">
+        <div class="chart-header">
+          <div class="chart-titles">
+            <h2 id="titleLine">營收/指標趨勢</h2>
+            <div id="subTitleLine" class="chart-subtitle"></div>
+          </div>
+          <div class="chart-nav">
+            <button type="button" class="mode-toggle" aria-label="切換年/月模式"></button>
+            <button type="button" class="nav-btn nav-prev" aria-label="Previous period">‹</button>
+            <button type="button" class="nav-btn nav-next" aria-label="Next period">›</button>
+          </div>
+        </div>
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+
+<!-- 表格上方：More Columns + 年/月 + 左右箭頭（同一行） -->
+<div class="table-nav-bar">
+  <div class="table-nav-inner">
+    <!-- 手機才顯示 More Columns，桌機隱藏 -->
+    <button id="toggleColsBtn" class="mobile-only">
+      More Columns ▼
+    </button>
+
+    <!-- 右側年/月 + 左右箭頭（桌機＋手機共用） -->
+    <div class="chart-nav">
+      <button type="button" class="mode-toggle" aria-label="切換年/月模式"></button>
+      <button type="button" class="nav-btn nav-prev" aria-label="Previous period">‹</button>
+      <button type="button" class="nav-btn nav-next" aria-label="Next period">›</button>
+    </div>
+  </div>
+</div>
+
+    <!-- 資料表格 -->
+    <table id="dataTable">
+      <thead id="thead"></thead>
+      <tbody id="tbody"></tbody>
+      <tfoot id="tfoot"></tfoot>
+    </table>
+
+    <!-- 備註區 -->
+    <div class="note">
+      <button onclick="updateRates()" 
+  style="margin-right:10px;padding:6px 14px;border-radius:999px;border:1px solid rgba(148,163,184,0.8);background:radial-gradient(circle at top,#0b1120 0,#020617 70%);color:#e5e7eb;font-size:12px;box-shadow:0 8px 22px rgba(15,23,42,0.9);">
+  Update
+</button>
+
+      <span id="noteRate"></span>
+    </div>
+    </div><!-- end mainPanelRevenue -->
+
+    <div id="mainPanelComplaints" role="tabpanel" aria-labelledby="mainTabComplaints" class="main-tab-panel" hidden>
+    <!-- 客訴／維修（COMPLAINTS_RAW） -->
+    <section class="complaints-section" id="complaintsSection" aria-label="客訴與維修紀錄">
+      <div class="complaints-toolbar" id="complaintsToolbarTop">
+        <div class="field field-complaint-room">
+          <select id="complaintRoomFilter" aria-label="房號"></select>
+        </div>
+        <div class="field field-complaint-subject">
+          <select id="complaintSubjectFilter" aria-label="主題"></select>
+        </div>
+      </div>
+      <p class="complaints-meta" id="complaintsMeta"></p>
+      <div class="complaints-charts" id="complaintsChartsRow">
+        <div class="compl-chart-card complaint-bar-card" id="complaintBarCard">
+          <h3 id="titleComplaintByRoom"></h3>
+          <div class="complaint-bar-viewport" id="complaintBarViewport">
+            <div class="complaint-bar-host" id="complaintBarHost">
+              <canvas id="complaintBarRooms" height="260"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="compl-chart-card complaint-line-card">
+          <div class="complaint-line-titles">
+            <h3 id="titleComplaintBySubject"></h3>
+            <div id="subTitleComplaintTrend" class="chart-subtitle"></div>
+          </div>
+          <div class="complaint-trend-host" id="complaintTrendHost">
+            <canvas id="complaintLineTrend" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="complaints-table-tools" id="complaintsTableTools">
+        <label class="chk">
+          <input type="checkbox" id="complaintHideNoComplaint" checked />
+          <span id="lblComplaintHideNo"></span>
+        </label>
+      </div>
+      <div class="complaints-toolbar complaints-toolbar-table" id="complaintsToolbarTable">
+        <div class="field field-complaint-room">
+          <select id="complaintRoomFilterTable" aria-label="房號"></select>
+        </div>
+        <div class="field field-complaint-subject">
+          <select id="complaintSubjectFilterTable" aria-label="主題"></select>
+        </div>
+      </div>
+      <div class="complaints-warn" id="complaintsWarn" hidden></div>
+      <div id="complaintsTableWrap">
+        <table id="complaintsTable">
+          <thead id="complaintsThead"></thead>
+          <tbody id="complaintsTbody"></tbody>
+        </table>
+      </div>
+      <p class="complaints-meta" id="complaintsEmpty" hidden></p>
+    </section>
+    </div><!-- end mainPanelComplaints -->
+
+  </main>
+
+<script>
+  // ★★★ 這裡改：Google Sheet API URL ★★★
+  const DATA_URL = "https://script.google.com/macros/s/AKfycbxGnlNnn-__A6wIPwXNG_0JY0L0oVTraR7E7l_Zr8kfko4c-kmAxjO4TOwnxoVLth-v/exec"; 
+
+  // 匯率（以 IDR 為基礎），一開始給預設值，後面會自動更新
+  const RATES = { 
+    IDR: 1, 
+    TWD: 550, 
+    USD: 16590, 
+    SGD: 12938 
+  };
+
+  // 記錄上次成功更新匯率的時間
+  let LAST_RATE_UPDATED = null;
+
+  // 自動更新匯率（使用 open.er-api.com）
+  // API 給的是「1 IDR = 幾外幣」，我們要轉成「1 外幣 = 幾 IDR」
+  async function updateRates(){
+    // 先顯示載入中提示（保留舊數字）
+    document.getElementById("noteRate").textContent = getNoteText(currentLang) + " → " +
+      ((currentLang==="zh") ? "匯率載入中…" :
+       (currentLang==="en") ? "Loading..." :
+                              "Memuat...");
+
+    try {
+      const res = await fetch("https://open.er-api.com/v6/latest/IDR", { cache: "no-store" });
+      const data = await res.json();
+
+      if (data && data.result === "success" && data.rates) {
+        // 將 (外幣/IDR) 取倒數成 (IDR/外幣)
+        RATES.TWD = Math.round(1 / data.rates.TWD);
+        RATES.USD = Math.round(1 / data.rates.USD);
+        RATES.SGD = Math.round(1 / data.rates.SGD);
+
+        // 成功才更新時間
+        LAST_RATE_UPDATED = new Date();
+
+        // 立即刷新備註（會帶上「上次更新：…」）
+        document.getElementById("noteRate").textContent = getNoteText(currentLang);
+      } else {
+        // API 有回應但異常：保留舊時間與舊數字
+        document.getElementById("noteRate").textContent = getNoteText(currentLang) + " → " +
+          ((currentLang==="zh") ? "更新失敗" :
+           (currentLang==="en") ? "Update failed" :
+                                  "Gagal perbarui");
+      }
+    } catch (e) {
+      console.error("更新匯率失敗:", e);
+      // 連線錯誤：保留舊時間與舊數字
+      document.getElementById("noteRate").textContent = getNoteText(currentLang) + " → " +
+        ((currentLang==="zh") ? "更新失敗" :
+         (currentLang==="en") ? "Update failed" :
+                                "Gagal perbarui");
+    }
+  }
+
+  // 動態產生匯率備註文字
+  function getNoteText(lang){
+    // 如果還沒抓到最新匯率，顯示 Loading
+    if(RATES.TWD === null || RATES.USD === null || RATES.SGD === null){
+      if(lang==="zh") return "匯率載入中...";
+      if(lang==="en") return "Loading exchange rates...";
+      if(lang==="id") return "Memuat kurs...";
+    }
+
+    // 主要文案
+    let mainText = "";
+    if(lang==="zh"){
+      mainText = `匯率（以 IDR 為基礎）：IDR:1 → TWD:${RATES.TWD}， USD:${RATES.USD}，SGD:${RATES.SGD}`;
+    } else if(lang==="en"){
+      mainText = `Exchange rates (base IDR): IDR:1 → TWD:${RATES.TWD}, USD:${RATES.USD}, SGD:${RATES.SGD}`;
+    } else { // id
+      mainText = `Kurs (berdasar IDR): IDR:1 → TWD:${RATES.TWD}, USD:${RATES.USD}, SGD:${RATES.SGD}`;
+    }
+
+    // 上次更新時間（僅成功更新後才會有）
+    const ts = LAST_RATE_UPDATED ? formatTs(LAST_RATE_UPDATED) : null;
+    if(ts){
+      if(lang==="zh") return `${mainText}（上次更新：${ts}）`;
+      if(lang==="en") return `${mainText} (Last updated: ${ts})`;
+      return `${mainText} (Pembaruan terakhir: ${ts})`;
+    }
+    return mainText;
+  }
+
+  // 幣別的小數位數設定
+  const CURRENCY_DECIMALS = { 
+    IDR: 0, 
+    TWD: 2, 
+    USD: 2, 
+    SGD: 2 
+  };
+
+  // ===== 時間格式化工具 =====
+  function pad2(n){ return String(n).padStart(2,'0'); }
+
+  function formatTs(dt){
+    if(!dt) return "";
+    const yy = String(dt.getFullYear()).slice(-2);
+    const mm = pad2(dt.getMonth()+1);
+    const dd = pad2(dt.getDate());
+    const HH = pad2(dt.getHours());
+    const MM = pad2(dt.getMinutes());
+    const SS = pad2(dt.getSeconds());
+    return `${yy}/${mm}/${dd} ${HH}:${MM}:${SS}`;
+  }
+
+  // ===== 多語對照表 =====
+  const LANGS = {
+    zh: {
+      title: "酒店業績儀表板",
+      tabs: {
+        revenue: "營收",
+        complaints: "客訴",
+        tablistLabel: "儀表板分區"
+      },
+      filters: { 
+        year: "年份", 
+        month: "月份", 
+        period: "期間",
+        periodRange: "起迄年月",
+        periodStart: "起始",
+        periodEnd: "結束",
+        periodClear: "清除區間(全部年份，全部月份)",
+        periodYears: "年份區間",
+        periodYearStart: "起年",
+        periodYearEnd: "迄年",
+        periodYearClear: "清除年份",
+        periodMonthClear: "清除月份",
+        periodMonths: "月份（複選）",
+        periodHint: "若已填「起始」與「結束」年月，以區間為準。未填起迄年月時，會套用「年份區間」與「月份複選」。留空＝不限制該項。",
+        complaints: "客訴",
+        complaintRoomRange: "房號",
+        complaintCountRange: "次數",
+        complaintClear: "清除客訴篩選",
+        currency: "貨幣", 
+        metric: "收入", 
+        lang: "語言" 
+      },
+      chartTitles: { 
+        pie: "收入來源", 
+        line: "營收/指標趨勢",
+        collapsePie: "收合圓餅圖",
+        expandPie: "展開圓餅圖"
+      },
+      modeLabels: {
+        year: "年",
+        month: "月"
+      },
+      table: { 
+        weekday: "星期", 
+        date: "日期", 
+        year: "年份", 
+        month: "月", 
+        total: "總收入", 
+        sum: "合計", 
+        roomSold: "已售", 
+        rna: "可售", 
+        rno: "預售",
+        occ: "住房率", 
+        arr: "平均房價"
+      },
+      complaints: {
+        room: "房號",
+        allRooms: "全部房號",
+        subject: "主題",
+        allSubjects: "全部主題",
+        hideNo: "隱藏「無客訴」列",
+        byRoom: "客訴：同房型的件數（堆疊主題）",
+        byMonthTrend: "客訴：每月件數趨勢",
+        trendTotal: "總數",
+        colDate: "日期",
+        colRoom: "房號",
+        colSubject: "主題",
+        colFo: "前廳",
+        colEng: "工程",
+        colHk: "客房",
+        colRepair: "維修處理",
+        colTime: "時間",
+        colResult: "結果",
+        colProgress: "進度",
+        meta: (n, real) => `本表 ${n} 列（實際客訴 ${real} 筆）`,
+        warn: (rooms, th) => `客訴 ≥ ${th} 次，房號：${rooms}`,
+        empty: "尚無客訴資料。請確認試算表已有「Complaints」分頁，且 Apps Script 已部署為合併回傳 complaints。",
+        noSlice: "（無實際客訴可統計）",
+        sectionTitle: "客訴與維修紀錄",
+        barOtherSubjects: "其他主題",
+        barNoRoomLabel: "無房號"
+      },
+      weekdays: ['週日','週一','週二','週三','週四','週五','週六'],
+      months: m => `${m}月`,
+      /* 業績明細表格「月」欄：只顯示數字，與期間／圖表用的 months 分開 */
+      monthsTable: m => String(m),
+      currencyOpts: [
+        { val:"IDR", text:"IDR" },
+        { val:"TWD", text:"TWD" },
+        { val:"USD", text:"USD" },
+        { val:"SGD", text:"SGD" }
+      ],
+      metricOpts: [
+        { val:"Total", text:"總收入" },
+        { val:"Room Revenue", text:"房務" },
+        { val:"Food Revenue", text:"餐飲" },
+        { val:"Beverages", text:"飲料" },
+        { val:"Other", text:"其他" },
+        { val:"D'Stores", text:"商店" },
+        { val:"Banquet", text:"宴會" },
+        { val:"Laundry", text:"洗衣" }
+      ]
+    },
+
+    en: {
+      title: "Hotel Performance Dashboard",
+      tabs: {
+        revenue: "Revenue",
+        complaints: "Complaints",
+        tablistLabel: "Main sections"
+      },
+      filters: { 
+        year: "Year", 
+        month: "Month", 
+        period: "Period",
+        periodRange: "From — To",
+        periodStart: "Start",
+        periodEnd: "End",
+        periodClear: "Clear range (all years, all months)",
+        periodYears: "Year range",
+        periodYearStart: "From",
+        periodYearEnd: "To",
+        periodYearClear: "Clear years",
+        periodMonthClear: "Clear months",
+        periodMonths: "Months (multi)",
+        periodHint: "If both start and end month are set, the month range applies. Otherwise, year range + month checkboxes are used. Empty = no filter on that axis.",
+        complaints: "Complaints",
+        complaintRoomRange: "Room",
+        complaintCountRange: "Count",
+        complaintClear: "Clear complaint filter",
+        currency: "Currency", 
+        metric: "Revenue", 
+        lang: "Language" 
+      },
+      chartTitles: { 
+        pie: "Revenue Sources", 
+        line: "Revenue/Indicators Trend",
+        collapsePie: "Collapse pie chart",
+        expandPie: "Expand pie chart"
+      },
+      modeLabels: {
+        year: "Year",
+        month: "Month"
+      },
+      table: { 
+        weekday: "Day", 
+        date: "Date", 
+        year: "Year", 
+        month: "Month", 
+        total: "Total", 
+        sum: "Grand Total", 
+        roomSold: "Sold", 
+        rna: "RNA", 
+        rno: "RNO",
+        occ: "Occ%", 
+        arr: "Avg Rate"
+      },
+      complaints: {
+        room: "Room",
+        allRooms: "All rooms",
+        subject: "Subject",
+        allSubjects: "All subjects",
+        hideNo: "Hide \"no complaint\" rows",
+        byRoom: "Real complaints per room (stacked by subject)",
+        byMonthTrend: "Real complaints: monthly trend",
+        trendTotal: "Total",
+        colDate: "Date",
+        colRoom: "Room",
+        colSubject: "Subject",
+        colFo: "FO",
+        colEng: "ENG",
+        colHk: "HK",
+        colRepair: "Repair",
+        colTime: "Time",
+        colResult: "Result",
+        colProgress: "Progress",
+        meta: (n, real) => `${n} row(s), ${real} real complaint(s)`,
+        warn: (rooms, th) => `Complaints ≥ ${th}: ${rooms}`,
+        empty: "No complaint data. Add a \"Complaints\" tab and deploy merged Apps Script.",
+        noSlice: "(No real complaints in period)",
+        sectionTitle: "Guest complaints & maintenance",
+        barOtherSubjects: "Other subjects",
+        barNoRoomLabel: "No room #"
+      },
+      weekdays: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+      months: m => ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m-1],
+      currencyOpts: [
+        { val:"IDR", text:"IDR" },
+        { val:"TWD", text:"NTD" },
+        { val:"USD", text:"USD" },
+        { val:"SGD", text:"SGD" }
+      ],
+      metricOpts: [
+        { val:"Total", text:"Total Revenue" },
+        { val:"Room Revenue", text:"Room" },
+        { val:"Food Revenue", text:"Food" },
+        { val:"Beverages", text:"Beverages" },
+        { val:"Other", text:"Other" },
+        { val:"D'Stores", text:"Stores" },
+        { val:"Banquet", text:"Banquet" },
+        { val:"Laundry", text:"Laundry" }
+      ]
+    },
+
+    id: {
+      title: "Dasbor Kinerja Hotel",
+      tabs: {
+        revenue: "Pendapatan",
+        complaints: "Keluhan",
+        tablistLabel: "Bagian utama"
+      },
+      filters: { 
+        year: "Tahun", 
+        month: "Bulan", 
+        period: "Periode",
+        periodRange: "Dari — Sampai",
+        periodStart: "Mulai",
+        periodEnd: "Akhir",
+        periodClear: "Hapus rentang (semua tahun & semua bulan)",
+        periodYears: "Rentang tahun",
+        periodYearStart: "Mulai",
+        periodYearEnd: "Sampai",
+        periodYearClear: "Hapus tahun",
+        periodMonthClear: "Hapus bulan",
+        periodMonths: "Bulan (multi)",
+        periodHint: "Jika bulan mulai & akhir diisi, rentang bulan dipakai. Jika tidak, rentang tahun + centang bulan dipakai. Kosong = tidak memfilter.",
+        complaints: "Keluhan",
+        complaintRoomRange: "Kamar",
+        complaintCountRange: "Jumlah",
+        complaintClear: "Hapus filter keluhan",
+        currency: "Mata Uang", 
+        metric: "Pendapatan", 
+        lang: "Bahasa" 
+      },
+      chartTitles: { 
+        pie: "Sumber Pendapatan", 
+        line: "Tren Pendapatan/Indikator",
+        collapsePie: "Sembunyikan pie",
+        expandPie: "Tampilkan pie"
+      },
+      modeLabels: {
+        year: "Tahun",
+        month: "Bulan"
+      },
+      table: { 
+        weekday: "Hari", 
+        date: "Tanggal", 
+        year: "Tahun", 
+        month: "Bulan", 
+        total: "Total", 
+        sum: "Jumlah Total", 
+        roomSold: "Terjual", 
+        rna: "Tersedia", 
+        rno: "Anggaran",
+        occ: "Hunian%", 
+        arr: "Tarif Kamar"
+      },
+      complaints: {
+        room: "Kamar",
+        allRooms: "Semua kamar",
+        subject: "Subjek",
+        allSubjects: "Semua subjek",
+        hideNo: "Sembunyikan baris tanpa komplain",
+        byRoom: "Komplain per kamar (bertumpuk subjek)",
+        byMonthTrend: "Komplain nyata: tren bulanan",
+        trendTotal: "Jumlah",
+        colDate: "Tanggal",
+        colRoom: "Kamar",
+        colSubject: "Subjek",
+        colFo: "FO",
+        colEng: "ENG",
+        colHk: "HK",
+        colRepair: "Perbaikan",
+        colTime: "Waktu",
+        colResult: "Hasil",
+        colProgress: "Progres",
+        meta: (n, real) => `${n} baris, ${real} komplain nyata`,
+        warn: (rooms, th) => `Komplain ≥ ${th}, kamar: ${rooms}`,
+        empty: "Belum ada data. Pastikan sheet \"Complaints\" dan Apps Script gabungan sudah deploy.",
+        noSlice: "(Tidak ada komplain nyata)",
+        sectionTitle: "Komplain & perawatan",
+        barOtherSubjects: "Subjek lain",
+        barNoRoomLabel: "Tanpa nomor kamar"
+      },
+      weekdays: ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'],
+      months: m => ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"][m-1],
+      currencyOpts: [
+        { val:"IDR", text:"IDR" },
+        { val:"TWD", text:"TWD" },
+        { val:"USD", text:"USD" },
+        { val:"SGD", text:"SGD" }
+      ],
+      metricOpts: [
+        { val:"Total", text:"Total" },
+        { val:"Room Revenue", text:"Kamar" },
+        { val:"Food Revenue", text:"Makanan" },
+        { val:"Beverages", text:"Minuman" },
+        { val:"Other", text:"Lainnya" },
+        { val:"D'Stores", text:"Toko" },
+        { val:"Banquet", text:"Pesta" },
+        { val:"Laundry", text:"Laundry" }
+      ]
+    }
+  };
+
+  // 自動偵測瀏覽器語言
+  let currentLang = (navigator.language.startsWith("id")) ? "id" :
+                    (navigator.language.startsWith("en")) ? "en" : "zh";
+
+  // ===== 語言 UI 更新 =====
+
+function updateLangUI(){
+    const L = LANGS[currentLang];
+
+    rebuildPeriodMonthChecks();
+    document.getElementById("pageTitle").textContent = L.title;
+    document.getElementById("lblPeriod").textContent = L.filters.period;
+    document.getElementById("lblPeriodRange").textContent = L.filters.periodRange;
+    document.getElementById("lblPeriodStart").textContent = L.filters.periodStart;
+    document.getElementById("lblPeriodEnd").textContent = L.filters.periodEnd;
+    document.getElementById("periodRangeClear").textContent = L.filters.periodClear;
+    document.getElementById("lblPeriodYears").textContent = L.filters.periodYears;
+    document.getElementById("lblPeriodYearStart").textContent = L.filters.periodYearStart;
+    document.getElementById("lblPeriodYearEnd").textContent = L.filters.periodYearEnd;
+    document.getElementById("periodYearClear").textContent = L.filters.periodYearClear;
+    document.getElementById("lblPeriodMonths").textContent = L.filters.periodMonths;
+    document.getElementById("periodMonthClear").textContent = L.filters.periodMonthClear;
+    const ph = document.getElementById("periodHint");
+    if (ph) ph.textContent = L.filters.periodHint;
+    const lcf = document.getElementById("lblComplaintFilter");
+    if (lcf) lcf.textContent = L.filters.complaints;
+    const lcr = document.getElementById("lblComplaintRoomRange");
+    if (lcr) lcr.textContent = L.filters.complaintRoomRange;
+    const lcc = document.getElementById("lblComplaintCountRange");
+    if (lcc) lcc.textContent = L.filters.complaintCountRange;
+    const crm1 = document.getElementById("complaintRoomMin");
+    const crm2 = document.getElementById("complaintRoomMax");
+    const ccm1 = document.getElementById("complaintCountMin");
+    const ccm2 = document.getElementById("complaintCountMax");
+    const phStart = L.filters.periodStart || "";
+    const phEnd = L.filters.periodEnd || "";
+    if (crm1) crm1.setAttribute("placeholder", phStart);
+    if (crm2) crm2.setAttribute("placeholder", phEnd);
+    if (ccm1) ccm1.setAttribute("placeholder", phStart);
+    if (ccm2) ccm2.setAttribute("placeholder", phEnd);
+    const cclr = document.getElementById("complaintFilterClear");
+    if (cclr) cclr.textContent = L.filters.complaintClear || "";
+    updateComplaintFilterButtonText();
+    document.getElementById("lblCurrency").textContent = L.filters.currency;
+    document.getElementById("lblMetric").textContent = L.filters.metric;
+    document.getElementById("lblLang").textContent = L.filters.lang;
+    document.getElementById("titlePie").textContent = L.chartTitles.pie;
+    document.getElementById("titleLine").textContent = L.chartTitles.line;
+    document.getElementById("noteRate").textContent = getNoteText(currentLang);
+    updatePieCollapseButtonUI();
+
+    const Ttabs = L.tabs;
+    if (Ttabs) {
+      const nav = document.getElementById("mainTabsNav");
+      if (nav) nav.setAttribute("aria-label", Ttabs.tablistLabel || "");
+      const trb = document.getElementById("mainTabRevenue");
+      const tcb = document.getElementById("mainTabComplaints");
+      if (trb) trb.textContent = Ttabs.revenue || "";
+      if (tcb) tcb.textContent = Ttabs.complaints || "";
+    }
+
+    const C = L.complaints;
+    if (C) {
+      const secC = document.getElementById("complaintsSection");
+      if (secC) secC.setAttribute("aria-label", C.sectionTitle || "");
+      const rf = document.getElementById("complaintRoomFilter");
+      const sf = document.getElementById("complaintSubjectFilter");
+      const rfT = document.getElementById("complaintRoomFilterTable");
+      const sfT = document.getElementById("complaintSubjectFilterTable");
+      if (rf) rf.setAttribute("aria-label", C.room || "");
+      if (sf) sf.setAttribute("aria-label", C.subject || "");
+      if (rfT) rfT.setAttribute("aria-label", C.room || "");
+      if (sfT) sfT.setAttribute("aria-label", C.subject || "");
+      const lh = document.getElementById("lblComplaintHideNo");
+      if (lh) lh.textContent = C.hideNo || "";
+      const tr = document.getElementById("titleComplaintByRoom");
+      if (tr) tr.textContent = C.byRoom || "";
+      const ts = document.getElementById("titleComplaintBySubject");
+      if (ts) ts.textContent = C.byMonthTrend || "";
+    }
+    updateComplaintTrendPeriodSubtitle();
+
+    // 保留原本選項
+    const oldCur = currencySel.value;
+    currencySel.innerHTML = L.currencyOpts.map(opt =>
+      `<option value="${opt.val}">${opt.text}</option>`
+    ).join('');
+    if(oldCur) currencySel.value = oldCur;
+    rebuildCurrencyDropdown();
+
+    // ✅ 改：收入多選（checkbox）用這個重新生成（保留既有勾選）
+    const keep = (typeof getSelectedMetrics === 'function') ? getSelectedMetrics() : [];
+    initMetricList();
+    // 把舊勾選恢復
+    if (keep.length) {
+      keep.forEach(v=>{
+        const cb = metricList.querySelector(`input[value="${v}"]`);
+        if (cb) cb.checked = true;
+      });
+    } else {
+      // 第一次進來預設勾 總收入、房務
+      ['Total','Room Revenue'].forEach(v=>{
+        const cb = metricList.querySelector(`input[value="${v}"]`);
+        if (cb) cb.checked = true;
+      });
+    }
+
+    // 指標（住房率% / 平均房價）多選清單
+    document.getElementById("lblMetric2").textContent = (currentLang==='zh') ? "指標" : (currentLang==='en' ? "Indicators" : "Indikator");
+    initIndicatorList();  // 生成指標 checkbox
+
+    // 更新年/月切換按鈕文字
+    updateModeToggleLabels();
+    updatePeriodButtonText();
+  }
+
+  // ===== 收入欄位定義 =====
+  const COLS = [
+    { key: 'Room Revenue' },
+    { key: 'Food Revenue' },
+    { key: 'Beverages' },
+    { key: 'Other' },
+    { key: "D'Stores" },
+    { key: 'Banquet' },
+    { key: 'Laundry' }
+  ];
+
+  // ===== 額外來源欄位定義 =====
+  const EXTRA_COLS = [
+    { key: 'Room Sold' },
+    { key: 'RNA Actual' },
+    { key: 'RNO Budget' }
+  ];
+
+  // ===== 顏色配置 =====
+  const COLORS = {
+    "Total": "#003f7f",        // 總收入 → 深藍
+    "Room Revenue": "#5DADE2", // 房務收入 → 淺天藍
+    "Food Revenue": "#F39C12", // 餐飲收入 → 橙色
+    "Beverages": "#1ABC9C",    // 飲料收入 → 藍綠
+    "Other": "#F1C40F",        // 其他收入 → 鮮黃
+    "D'Stores": "#C72E3B",     // 商店收入 → 紅色
+    "Banquet": "#F78FB3",      // 宴會收入 → 粉紅
+    "Laundry": "#9B59B6"       // 洗衣收入 → 紫色
+  };
+
+  // ===== 全域變數 =====
+  let RAW = [];
+  /** 客訴／維修（Apps Script 合併回傳 complaints 時填入；僅陣列時為 []） */
+  let COMPLAINTS_RAW = [];
+
+  // 抓取主要 DOM 元素
+  const periodBtn = document.getElementById('periodBtn');
+  const periodDropdown = document.getElementById('periodDropdown');
+  const periodStart = document.getElementById('periodStart');
+  const periodEnd = document.getElementById('periodEnd');
+  const periodYearStart = document.getElementById('periodYearStart');
+  const periodYearEnd = document.getElementById('periodYearEnd');
+  const monthCheckList = document.getElementById('monthCheckList');
+  const currencySel = document.getElementById('currencySel');
+  const currencyBtn = document.getElementById('currencyBtn');
+  const currencyDropdown = document.getElementById('currencyDropdown');
+  const currencyList = document.getElementById('currencyList');
+  const trendCard = document.querySelector('.chart-right');
+
+  // 記錄最近使用的「月份」（切換年/月模式時會用到）
+  let lastMonthSel = null;
+
+  function ymSortKey(y, m) { return y * 100 + m; }
+
+  function keyToYM(k) {
+    const y = Math.floor(k / 100);
+    const m = k % 100;
+    return { y, m };
+  }
+
+  function parseMonthInput(str) {
+    const p = String(str || '').split('-');
+    if (p.length < 2) return null;
+    const y = Number(p[0]), m = Number(p[1]);
+    if (!y || !m || m < 1 || m > 12) return null;
+    return { y, m };
+  }
+
+  function addMonthsKey(k, delta) {
+    const { y, m } = keyToYM(k);
+    let tot = y * 12 + (m - 1) + delta;
+    const ny = Math.floor(tot / 12);
+    const nm = (tot % 12) + 1;
+    return ymSortKey(ny, nm);
+  }
+
+  function setMonthInput(el, k) {
+    if (!el) return;
+    const { y, m } = keyToYM(k);
+    el.value = `${y}-${String(m).padStart(2, '0')}`;
+  }
+
+  function getRangeBounds() {
+    if (!periodStart || !periodEnd) return null;
+    if (!periodStart.value || !periodEnd.value) return null;
+    let a = parseMonthInput(periodStart.value);
+    let b = parseMonthInput(periodEnd.value);
+    if (!a || !b) return null;
+    let ka = ymSortKey(a.y, a.m), kb = ymSortKey(b.y, b.m);
+    if (ka > kb) { const t = ka; ka = kb; kb = t; }
+    return { startKey: ka, endKey: kb };
+  }
+
+  function usingRangeFilter() {
+    return getRangeBounds() !== null;
+  }
+
+  function getYearBounds() {
+    const years = RAW
+      .map(r => parseYMD(r.Date)?.y)
+      .filter(y => typeof y === 'number' && !isNaN(y));
+    if (!years.length) return null;
+    return { minYear: Math.min(...years), maxYear: Math.max(...years) };
+  }
+
+  function getYearRange() {
+    if (!periodYearStart || !periodYearEnd) return null;
+    const b = getYearBounds();
+    if (!b) return null;
+    const aRaw = periodYearStart.value;
+    const zRaw = periodYearEnd.value;
+    if (!aRaw && !zRaw) return null;
+    let a = aRaw ? Number(aRaw) : b.minYear;
+    let z = zRaw ? Number(zRaw) : b.maxYear;
+    if (!a || !z) return null;
+    if (a > z) { const t = a; a = z; z = t; }
+    return { startYear: a, endYear: z };
+  }
+
+  function getMonthFilterSet() {
+    if (!monthCheckList) return null;
+    const checked = Array.from(monthCheckList.querySelectorAll('input:checked')).map(i => Number(i.value));
+    if (checked.length === 0) return null;
+    return new Set(checked);
+  }
+
+  function rowMatchesPeriod(t) {
+    const k = ymSortKey(t.y, t.m);
+    const rb = getRangeBounds();
+    if (rb) return k >= rb.startKey && k <= rb.endKey;
+    const yr = getYearRange();
+    const ms = getMonthFilterSet();
+    if (yr && (t.y < yr.startYear || t.y > yr.endYear)) return false;
+    if (ms && !ms.has(t.m)) return false;
+    return true;
+  }
+
+  function getDataYmBounds() {
+    let minK = Infinity, maxK = -Infinity;
+    for (const r of RAW) {
+      const t = parseYMD(r.Date);
+      if (!t) continue;
+      const k = ymSortKey(t.y, t.m);
+      if (k < minK) minK = k;
+      if (k > maxK) maxK = k;
+    }
+    return { minK, maxK };
+  }
+
+  function rebuildPeriodMonthChecks() {
+    if (!monthCheckList) return;
+    const prev = new Set(
+      Array.from(monthCheckList.querySelectorAll('input:checked')).map(i => Number(i.value))
+    );
+    monthCheckList.innerHTML = Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1;
+      return `<label><input type="checkbox" value="${m}"> ${monthLabel(m)}</label>`;
+    }).join('');
+    monthCheckList.querySelectorAll('input').forEach(cb => {
+      if (prev.has(Number(cb.value))) cb.checked = true;
+      cb.addEventListener('change', () => { render(); updatePeriodButtonText(); });
+    });
+  }
+
+  function updatePeriodButtonText() {
+    if (!periodBtn) return;
+    const rb = getRangeBounds();
+    if (rb) {
+      const a = keyToYM(rb.startKey), b = keyToYM(rb.endKey);
+      periodBtn.textContent = `${a.y}-${String(a.m).padStart(2, '0')}～${b.y}-${String(b.m).padStart(2, '0')}`;
+      return;
+    }
+    const yr = getYearRange();
+    const ms = getMonthFilterSet();
+    const yTxt = yr
+      ? (yr.startYear === yr.endYear ? String(yr.startYear) : `${yr.startYear}～${yr.endYear}`)
+      : (currentLang === 'zh' ? '全部年份' : currentLang === 'en' ? 'All years' : 'Semua tahun');
+    const mTxt = ms ? [...ms].sort((a, b) => a - b).map(m => monthLabel(m)).join('、')
+      : (currentLang === 'zh' ? '全部月份' : currentLang === 'en' ? 'All months' : 'Semua bulan');
+    periodBtn.textContent = `${yTxt} · ${mTxt}`;
+  }
+
+  function setSingleYearMonth(y, m) {
+    if (periodYearStart) periodYearStart.value = String(y);
+    if (periodYearEnd) periodYearEnd.value = String(y);
+    if (monthCheckList) {
+      monthCheckList.querySelectorAll('input').forEach(i => { i.checked = Number(i.value) === m; });
+    }
+    lastMonthSel = String(m);
+  }
+
+  function setSingleYearAllMonths(y) {
+    if (periodYearStart) periodYearStart.value = String(y);
+    if (periodYearEnd) periodYearEnd.value = String(y);
+    if (monthCheckList) {
+      monthCheckList.querySelectorAll('input').forEach(i => { i.checked = false; });
+    }
+  }
+
+  // 更新所有年/月切換按鈕的文字
+  function updateModeToggleLabels() {
+    const L = LANGS[currentLang];
+    const daily = (currentMode() === 'daily');
+    let label = daily ? '月' : '年';
+    if (L.modeLabels) {
+      label = daily ? L.modeLabels.month : L.modeLabels.year;
+    }
+    document.querySelectorAll('.mode-toggle').forEach(btn => {
+      btn.textContent = label;
+    });
+  }
+
+  // 改：收入多選 (button + checkbox)
+  const metricBtn = document.getElementById('metricBtn');
+  const metricList = document.getElementById('metricList');
+  // 指標多選 (button + checkbox)
+  const indBtn = document.getElementById('indBtn');
+  const indList = document.getElementById('indList');
+
+  const langSel = document.getElementById('langSel');
+  const langBtn = document.getElementById('langBtn');
+  const langDropdown = document.getElementById('langDropdown');
+  const langList = document.getElementById('langList');
+  const thead = document.getElementById('thead');
+  const tbody = document.getElementById('tbody');
+  const tfoot = document.getElementById('tfoot');
+  const loadingOverlay = document.getElementById('loadingOverlay');
+
+  // ===== 收入多選清單（checkbox） =====
+  function initMetricList(){
+    const opts = LANGS[currentLang].metricOpts; // 只放金額型指標
+    metricList.innerHTML = opts.map(opt =>
+      `<label><input type="checkbox" value="${opt.val}"> ${opt.text}</label>`
+    ).join('');
+
+    // 預設勾「總收入」「房務」
+    ['Total','Room Revenue'].forEach(v=>{
+      const cb = metricList.querySelector(`input[value="${v}"]`);
+      if(cb) cb.checked = true;
+    });
+
+    // 勾選變動即時更新
+    metricList.querySelectorAll('input').forEach(cb=>{
+      cb.addEventListener('change', render);
+    });
+
+    // 下拉開關（只綁一次，不要重複）
+    if(!metricBtn._bound){
+      metricBtn.addEventListener('click', (e)=>{
+        e.stopPropagation(); // 不要冒泡
+        const dd = metricBtn.parentElement;
+        if (!dd) return;
+        const isOpen = dd.classList.contains('show');
+        if (isOpen) {
+          dd.classList.remove('show');
+          return;
+        }
+        closeOtherDropdowns(dd);
+        dd.classList.add('show');
+      });
+      metricBtn._bound = true;
+    }
+
+    // 點擊外部區域 → 自動收合（只綁一次）
+    if (!window._metricDocBound) {
+      document.addEventListener('click', (e)=>{
+        if(!metricBtn.parentElement.contains(e.target)){
+          metricBtn.parentElement.classList.remove('show');
+        }
+      });
+      window._metricDocBound = true;
+    }
+  }
+
+  function getSelectedMetrics(){
+    return Array.from(metricList.querySelectorAll('input:checked'))
+                .map(cb => cb.value);
+  }
+
+  // ===== 指標多選清單（住房率% / 平均房價） =====
+  function initIndicatorList(){
+    // 顯示用的文字（跟語系連動）
+    const occText = (LANGS[currentLang].table.occ || "Occ%");
+    const arrText = (LANGS[currentLang].table.arr || "Avg Rate");
+
+    // 只有兩個選項：OccRate / AvgRate
+    indList.innerHTML = [
+      `<label><input type="checkbox" value="OccRate"> ${occText}</label>`,
+      `<label><input type="checkbox" value="AvgRate"> ${arrText}</label>`
+    ].join('');
+
+    // 預設兩個都勾
+    indList.querySelectorAll('input').forEach(cb=> cb.checked = true);
+
+    // 勾選變動 → 重新繪圖
+    indList.querySelectorAll('input').forEach(cb=>{
+      cb.addEventListener('change', render);
+    });
+
+    // 下拉開關（只綁一次）
+    if(!indBtn._bound){
+      indBtn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const dd = indBtn.parentElement;
+        if (!dd) return;
+        const isOpen = dd.classList.contains('show');
+        if (isOpen) {
+          dd.classList.remove('show');
+          return;
+        }
+        closeOtherDropdowns(dd);
+        dd.classList.add('show');
+      });
+      indBtn._bound = true;
+    }
+
+    // 點擊外部區域 → 自動收合（只綁一次）
+    if (!window._indDocBound) {
+      document.addEventListener('click', (e)=>{
+        if(!indBtn.parentElement.contains(e.target)){
+          indBtn.parentElement.classList.remove('show');
+        }
+      });
+      window._indDocBound = true;
+    }
+  }
+
+  function getSelectedIndicators(){
+    return Array.from(indList.querySelectorAll('input:checked'))
+                .map(cb => cb.value);
+  }
+
+  // 圖表物件 (稍後初始化)
+  let trendChart, pieChart;
+
+  /** 手機橫向：預設收合左側圓餅；其餘預設展開 */
+  function isMobileLandscapeCharts() {
+    try {
+      return !!(
+        window.matchMedia &&
+        window.matchMedia("(max-width: 900px) and (orientation: landscape)").matches
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function bumpRevenueChartsSoon() {
+    function doResize() {
+      try {
+        if (typeof trendChart !== "undefined" && trendChart) trendChart.resize();
+      } catch (e0) {}
+      try {
+        if (typeof pieChart !== "undefined" && pieChart) pieChart.resize();
+      } catch (e1) {}
+    }
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(function () {
+        doResize();
+        requestAnimationFrame(doResize);
+      });
+    } else {
+      setTimeout(doResize, 0);
+      setTimeout(doResize, 120);
+    }
+  }
+
+  function updatePieCollapseButtonUI() {
+    const charts = document.querySelector(".charts");
+    const btn = document.getElementById("pieCollapseBtn");
+    if (!charts || !btn) return;
+    const collapsed = charts.classList.contains("pie-collapsed");
+    const L = (LANGS[currentLang] && LANGS[currentLang].chartTitles) || {};
+    btn.textContent = collapsed ? "›" : "‹";
+    btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    const label = collapsed
+      ? (L.expandPie || "Expand pie chart")
+      : (L.collapsePie || "Collapse pie chart");
+    btn.setAttribute("aria-label", label);
+    btn.setAttribute("title", label);
+  }
+
+  function setPieCollapsed(collapsed, opts) {
+    const charts = document.querySelector(".charts");
+    if (!charts) return;
+    const want = !!collapsed;
+    charts.classList.toggle("pie-collapsed", want);
+    updatePieCollapseButtonUI();
+    if (!(opts && opts.skipResize)) bumpRevenueChartsSoon();
+  }
+
+  function applyPieCollapseDefaultByViewport(force) {
+    // force=true：轉向/初始套用預設；使用者手動切換後直到下一次轉向才再套預設
+    if (!force && window._pieCollapseUserTouched) return;
+    setPieCollapsed(isMobileLandscapeCharts(), { skipResize: false });
+  }
+
+  function setupPieCollapseToggle() {
+    const btn = document.getElementById("pieCollapseBtn");
+    if (!btn || btn._pieBound) return;
+    btn.addEventListener("click", function (e) {
+      if (e) e.stopPropagation();
+      const charts = document.querySelector(".charts");
+      if (!charts) return;
+      window._pieCollapseUserTouched = true;
+      setPieCollapsed(!charts.classList.contains("pie-collapsed"));
+    });
+    btn._pieBound = true;
+
+    applyPieCollapseDefaultByViewport(true);
+
+    if (!window._pieCollapseOrientBound && typeof window.matchMedia === "function") {
+      const mq = window.matchMedia("(max-width: 900px) and (orientation: landscape)");
+      const onChange = function () {
+        window._pieCollapseUserTouched = false;
+        applyPieCollapseDefaultByViewport(true);
+      };
+      if (typeof mq.addEventListener === "function") mq.addEventListener("change", onChange);
+      else if (typeof mq.addListener === "function") mq.addListener(onChange);
+      window.addEventListener("orientationchange", function () {
+        setTimeout(onChange, 80);
+      });
+      window._pieCollapseOrientBound = true;
+    }
+  }
+
+  // ===== 工具函式 =====
+
+  // 抓取 JSON 資料
+  async function fetchJSON(url){
+    const res = await fetch(url, { cache:'no-store' });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  }
+
+  // 轉換字串 → 數字
+  function toNumber(v){ 
+    if(!v) return 0; 
+    return parseFloat(String(v).replace(/[,\\s]/g,'').replace(/[^0-9.-]/g,'')) || 0; 
+  }
+
+  // 幣別轉換 (IDR → cur)
+  function idrTo(cur, amt){ 
+    return amt / (RATES[cur] || 1); 
+  }
+
+  // 格式化金額
+  function formatCurrency(x, cur){ 
+    const d = CURRENCY_DECIMALS[cur] || 0; 
+    return Number(x).toLocaleString(
+      currentLang==="en" ? "en-US" : "zh-TW",
+      { minimumFractionDigits:d, maximumFractionDigits:d }
+    ); 
+  }
+
+  // 日期字串解析 (yyyy-mm-dd → 物件)
+  function parseYMD(dateStr){ 
+    const d = new Date(dateStr); 
+    if(isNaN(d)) return null; 
+    return { 
+      y: d.getFullYear(), 
+      m: d.getMonth()+1, 
+      d: d.getDate(), 
+      wd: d.getDay(), 
+      str: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` 
+    }; 
+  }
+
+  // 月份標籤
+  function monthLabel(m){ 
+    return LANGS[currentLang].months(m); 
+  }
+
+  /** 表格與圖表 X 軸：中文月份僅數字；其他語系沿用 monthLabel */
+  function tableMonthLabel(m) {
+    const L = LANGS[currentLang];
+    if (typeof L.monthsTable === "function") return L.monthsTable(m);
+    return monthLabel(m);
+  }
+
+  // 判斷模式（單一曆月＝日明細；否則為月匯總）
+  function currentMode() {
+    const rb = getRangeBounds();
+    if (rb) return (rb.startKey === rb.endKey) ? 'daily' : 'agg';
+    const yr = getYearRange();
+    const ms = getMonthFilterSet();
+    if (yr && yr.startYear === yr.endYear && ms && ms.size === 1) return 'daily';
+    return 'agg';
+  }
+
+  function getDailyYM() {
+    const rb = getRangeBounds();
+    if (rb && rb.startKey === rb.endKey) return keyToYM(rb.startKey);
+    const yr = getYearRange();
+    const ms = getMonthFilterSet();
+    if (yr && yr.startYear === yr.endYear && ms && ms.size === 1) {
+      return { y: yr.startYear, m: [...ms][0] };
+    }
+    return null;
+  }
+
+  // 過濾資料
+  function filterData() {
+    return RAW.filter(r => {
+      const t = parseYMD(r.Date);
+      return t && rowMatchesPeriod(t);
+    });
+  }
+
+  // ===== 自訂外掛：在 yPercent 軸下方標註 "(Occ%)" =====
+  const percentNotePlugin = {
+    id: 'percentNote',
+    afterDraw(chart) {
+      const y = chart.scales?.yPercent;
+      if (!y) return;
+      const ctx = chart.ctx;
+
+      ctx.save();
+      ctx.fillStyle = '#666';
+      ctx.font = '12px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans", sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'top';
+      // 放在右側 % 軸的底部內側（靠近 0 的位置）
+      ctx.fillText('(Occ%)', y.right - 0, y.bottom + 6);
+      ctx.restore();
+    }
+  };
+
+  // ===== 圖表渲染 =====
+  function renderCharts(rows){
+    const cur = currencySel.value;
+    const selectedMetrics = getSelectedMetrics(); // ✅ 多選收入
+
+    const mode = currentMode();
+    const L = LANGS[currentLang];
+    let labels = [], dayRows = [], groups = [];
+
+    if(mode === 'daily'){
+      const dm = getDailyYM();
+      if (!dm) {
+        dayRows = [];
+        labels = [];
+      } else {
+        const yv = dm.y, mv = dm.m;
+        dayRows = rows
+          .filter(r => { const t = parseYMD(r.Date); return t && t.y === yv && t.m === mv; })
+          .sort((a,b) => parseYMD(a.Date).d - parseYMD(b.Date).d);
+        labels = dayRows.map(r => parseYMD(r.Date).d + "");
+      }
+    } else {
+      const map = new Map();
+      for(const r of rows){
+        const t = parseYMD(r.Date); if(!t) continue;
+        const key = `${t.y}-${t.m}`;
+        if(!map.has(key)) map.set(key,{
+          y: t.y, m: t.m,
+          totals: COLS.reduce((o,c)=>(o[c.key]=0,o),{}),
+          extras: EXTRA_COLS.reduce((o,c)=>(o[c.key]=0,o),{})
+        });
+        const g = map.get(key);
+        for(const c of COLS) g.totals[c.key] += toNumber(r[c.key]);
+        for(const c of EXTRA_COLS) g.extras[c.key] += toNumber(r[c.key]);
+      }
+      groups = Array.from(map.values()).sort((a,b)=>a.y-b.y || a.m-b.m);
+      const distinctY = new Set(groups.map(g => g.y));
+      const showY = distinctY.size > 1;
+      labels = groups.map(g => {
+        if (!showY) return tableMonthLabel(g.m);
+        const yy = String(g.y).slice(-2);
+        return `${yy}/${tableMonthLabel(g.m)}`;
+      });
+    }
+
+    const datasets = [];
+
+    // 多選收入 datasets
+    for(const metric of selectedMetrics){
+      let data = [];
+      if(mode==='daily'){
+        data = dayRows.map(r=>{
+          if(metric==="Total"){
+            return idrTo(cur, COLS.reduce((s,c)=>s+toNumber(r[c.key]),0));
+          } else {
+            return idrTo(cur, toNumber(r[metric]));
+          }
+        });
+      } else {
+        data = groups.map(g=>{
+          if(metric==="Total"){
+            return idrTo(cur, COLS.reduce((s,c)=>s+g.totals[c.key],0));
+          } else {
+            return idrTo(cur, g.totals[metric]);
+          }
+        });
+      }
+
+      const label = LANGS[currentLang].metricOpts.find(m=>m.val===metric)?.text || metric;
+      const color = COLORS[metric] || "#666";
+
+      // Y 軸邏輯
+      let yAxisID = "yRight";
+      if(metric==="Total" || metric==="Room Revenue") yAxisID = "yLeft";
+      if(metric==="OccRate") yAxisID = "yPercent";
+
+      datasets.push({
+        label, data,
+        borderColor: color,
+        backgroundColor: color+"40",
+        fill:false,
+        yAxisID
+      });
+    }
+
+    // 指標（多選：OccRate / AvgRate）datasets
+    const inds = getSelectedIndicators();
+    for(const ind of inds){
+      let dataI = [];
+      if(mode === 'daily'){
+        dataI = dayRows.map(r=>{
+          if(ind==="OccRate"){
+            const rs = toNumber(r['Room Sold']);
+            const ra = toNumber(r['RNA Actual']);
+            return (ra>0) ? (rs/ra*100) : 0;        // 百分比，不轉幣別
+          } else { // AvgRate
+            const rs = toNumber(r['Room Sold']);
+            return (rs>0) ? idrTo(cur, toNumber(r["Room Revenue"])/rs) : 0;  // 金額，轉成當前幣別
+          }
+        });
+      } else {
+        dataI = groups.map(g=>{
+          if(ind==="OccRate"){
+            const rs = g.extras['Room Sold'];
+            const ra = g.extras['RNA Actual'];
+            return (ra>0) ? (rs/ra*100) : 0;
+          } else { // AvgRate
+            const rs = g.extras['Room Sold'];
+            return (rs>0) ? idrTo(cur, g.totals['Room Revenue']/rs) : 0;
+          }
+        });
+      }
+      const labelI = (ind==="OccRate") ? (LANGS[currentLang].table.occ || "Occ%")
+                                       : (LANGS[currentLang].table.arr || "Avg Rate");
+      const colorI = (ind==="OccRate") ? "#3d3d3d" : "#b3b3b3";  // 住房率%灰、平均房價深灰
+      const yAxisID = (ind==="OccRate") ? "yPercent" : "yRight";
+      datasets.push({
+        label: labelI,
+        data: dataI,
+        borderColor: colorI,
+        backgroundColor: colorI + "40",
+        fill: false,
+        yAxisID
+      });
+    }
+
+    // 建立折線圖 trendChart
+    // 註冊外掛（只註冊一次）
+    if (!window._percentNoteRegistered) {
+      Chart.register(percentNotePlugin);
+      window._percentNoteRegistered = true;
+    }
+
+    if (trendChart) trendChart.destroy();
+
+    // 先判斷是否為手機寬度（更準）
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+
+    /*
+     * 客訴長條圖數字標籤使用自寫 afterDatasetsDraw plugin，不依賴 chartjs-plugin-datalabels。
+     */
+
+    // 桌機/手機不同刻度數（桌機=10、手機=8）
+    const TICK_LIMIT = isMobile ? 8 : 10;
+    const axisTickPx = isMobile ? 9 : 12;
+    const axisTickXPx = isMobile ? 9 : 11;
+    const legendFontPx = isMobile ? 9 : 12;
+
+    trendChart = new Chart(document.getElementById("trendChart"), {
+      type: "line",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,           // 交給比例算高度
+        aspectRatio: isMobile ? 1.2 : 2,     // 手機高一點，桌機維持 2:1
+        // 讓繪圖區更貼近左右邊（提升可用寬度）
+        layout: { padding: { left: (isMobile ? 0 : 6), right: (isMobile ? 0 : 6), top:4, bottom:4 } },
+
+        plugins:{
+          legend:{ 
+            display:true,
+            labels:{
+              boxWidth: 10,
+              boxHeight: 10,
+              font:{ size: legendFontPx }
+            }
+          },
+          tooltip:{
+            callbacks:{
+              label: function(ctx){
+                const ds = ctx.dataset;
+                const val = ctx.parsed.y;
+                if (ds.yAxisID === 'yPercent') {
+                  const xLabel = ctx.chart.data.labels[ctx.dataIndex] || '';
+                  return `${xLabel} ${Number(val).toFixed(2)}%`;
+                }
+                const lab = ds.label != null ? String(ds.label) : "";
+                return lab ? lab + ": " + val : String(val);
+              }
+            }
+          },
+          title: {
+            display: true,
+            text: "Y-axis多軸：L=Total/Room、R=Others...",
+            align: "start"
+          }
+        },
+        scales:{
+          yLeft: { 
+            type:'linear',
+            position:'left',
+            beginAtZero:true,
+            suggestedMax: undefined,
+            grace: '5%',
+            ticks: {
+              color: "#e5e7eb",
+              callback: function(value) {
+                if (value >= 1_000_000_000) {
+                  const v = value/1_000_000_000;
+                  return (Number.isInteger(v) ? v : v.toFixed(1)) + "B";
+                }
+                if (value >= 1_000_000) {
+                  const v = value/1_000_000;
+                  return (Number.isInteger(v) ? v : v.toFixed(1)) + "M";
+                }
+                if (value >= 1_000) {
+                  return (value/1_000).toFixed(0) + "K";
+                }
+                return value;
+              },
+              maxTicksLimit: TICK_LIMIT,
+              font: { size: axisTickPx },
+              padding: 0
+            },
+            grid: {
+              color: "rgba(148, 163, 184, 0.35)",
+              lineWidth: 1
+            }
+          },
+          yRight:{ 
+            type:'linear',
+            position:'right',
+            beginAtZero:true,
+            grid:{ 
+              drawOnChartArea:false,
+              color: "rgba(148, 163, 184, 0.25)"
+            },
+            grace: '5%',
+            ticks: {
+              color: "#e5e7eb",
+              callback: function(value) {
+                if (value >= 1_000_000_000) {
+                  const v = value/1_000_000_000;
+                  return (Number.isInteger(v) ? v : v.toFixed(1)) + "B";
+                }
+                if (value >= 1_000_000) {
+                  const v = value/1_000_000;
+                  return (Number.isInteger(v) ? v : v.toFixed(1)) + "M";
+                }
+                if (value >= 1_000) {
+                  return (value/1_000).toFixed(0) + "K";
+                }
+                return value;
+              },
+              maxTicksLimit: TICK_LIMIT,
+              font: { size: axisTickPx },
+              padding: 0
+            }
+          },
+          yPercent:{
+            type:'linear',
+            position:'right',
+            min:0,
+            max:100,
+            grid:{ 
+              drawOnChartArea:false,
+              color: "rgba(148, 163, 184, 0.2)"
+            },
+            afterBuildTicks(scale){
+              const ticks = [];
+              for(let v=0; v<=100; v+=10) ticks.push({ value:v });
+              scale.ticks = ticks;
+            },
+            ticks:{
+              color: "#e5e7eb",
+              autoSkip: false,
+              callback: v => v,
+              maxRotation: 0,
+              minRotation: 0,
+              font: { size: axisTickPx }
+            },
+            grace: 6
+          },
+          x: {
+            ticks: {
+              color: "#e5e7eb",
+              font: { size: axisTickXPx }
+            },
+            grid: {
+              color: "rgba(148, 163, 184, 0.25)"
+            }
+          }
+        }
+      }
+    });
+
+    // === 圓餅圖 ===
+    let totals = COLS.reduce((o,c)=>(o[c.key]=0,o),{});
+    rows.forEach(r => { 
+      for(const c of COLS) totals[c.key] += idrTo(cur, toNumber(r[c.key])); 
+    });
+
+    const pieLabels = COLS.map(c => {
+      const label = LANGS[currentLang].metricOpts.find(m => m.val === c.key)?.text || c.key;
+      const value = totals[c.key];
+      return `${label} (${formatCurrency(value, cur)})`;
+    });
+
+    const pieKeys   = COLS.map(c => c.key);
+    const pieData   = pieKeys.map(k => totals[k]);
+    const pieColors = pieKeys.map(k => COLORS[k]);
+
+    if(pieChart) pieChart.destroy();
+    pieChart = new Chart(document.getElementById("pieChart"), {
+      type: "pie",
+      data: { 
+        labels: pieLabels, 
+        datasets: [{ data: pieData, backgroundColor: pieColors }] 
+      },
+      options:{ 
+        responsive: true, 
+        maintainAspectRatio: !window.matchMedia('(max-width: 768px)').matches,
+        layout: { padding: { top: 0, bottom: 0, left: 0, right: 0 } },
+        onClick: (evt, elements) => {
+          if(!elements.length) return;
+          const idx = elements[0].index;
+          // 點圓餅圖 → 切換收入清單的勾選狀態
+          const key = pieKeys[idx];
+          const cb = metricList.querySelector(`input[value="${key}"]`);
+          if(cb){
+            cb.checked = !cb.checked;
+            render();
+          }
+        },
+        plugins:{ 
+          legend:{ 
+            position:"right", 
+            labels:{ boxWidth:12, font:{size:12}, padding: 8 } 
+          }
+        } 
+      }
+    });
+
+    // 在標題顯示總收入
+    const totalIncome = pieData.reduce((a,b)=>a+b,0);
+    const pieTitle = document.getElementById("titlePie");
+    const pieSub = document.getElementById("subTitlePie");
+    if (pieTitle) pieTitle.textContent = LANGS[currentLang].chartTitles.pie;
+    if (pieSub) {
+      const prefix = (currentLang === 'en') ? 'Total: '
+                   : (currentLang === 'id') ? 'Total: '
+                   : '總收入：';
+      pieSub.textContent = `${prefix}${cur} ${formatCurrency(totalIncome, cur)}`;
+    }
+  } // ← 結束 renderCharts()
+
+  const COMPLAINT_REPEAT_THRESHOLD = 3;
+  const COMPLAINT_STACK_TOP_N = 5;
+  const COMPLAINT_STACK_COLORS = [
+    "#22d3ee", "#c084fc", "#fb7185", "#4ade80", "#facc15", "#94a3b8"
+  ];
+  let complaintBarChart, complaintTrendChart;
+  let complaintBarMountGen = 0;
+
+  function complaintTruncLegend(s, maxLen) {
+    s = String(s);
+    if (s.length <= maxLen) return s;
+    return s.slice(0, maxLen - 1) + "…";
+  }
+
+  /** Y 軸房號與該列長條垂直對齊：Chart.js 3 繪製軸文字時用 item.translation[1]（非 item.y）；並須在 drawLabels 之前寫入 _labelItems。 */
+  function alignComplaintYLabelsToBarCenter(chart) {
+    try {
+      if (!chart || !chart.canvas || chart.canvas.id !== "complaintBarRooms") return;
+      if (!chart.options || chart.options.indexAxis !== "y") return;
+      var sc = chart.scales.y;
+      if (!sc) return;
+      var area = chart.chartArea;
+      if (!area || area.bottom <= area.top) return;
+      var compute =
+        typeof sc._computeLabelItems === "function" ? sc._computeLabelItems.bind(sc) : null;
+      if (!compute) return;
+      /* 每幀重算，避免 chartArea／圖例高度變了仍沿用舊 _labelItems */
+      var items = (sc._labelItems = compute(area));
+      if (!items || !items.length) return;
+      var n = items.length;
+      for (var i = 0; i < n; i++) {
+        var sumY = 0;
+        var cnt = 0;
+        for (var di = 0; di < chart.data.datasets.length; di++) {
+          var m = chart.getDatasetMeta(di);
+          if (!m || m.hidden || !m.data || i >= m.data.length) continue;
+          var bar = m.data[i];
+          if (!bar || bar.skip) continue;
+          sumY += bar.y;
+          cnt++;
+        }
+        var cy = cnt ? sumY / cnt : null;
+        if (cy == null) {
+          try {
+            cy = sc.getPixelForTick(i);
+          } catch (e2) {}
+        }
+        if (cy == null) continue;
+        var it = items[i];
+        if (!it) continue;
+        it.textBaseline = "middle";
+        if (it.translation && typeof it.translation[1] === "number") {
+          it.translation[1] = cy;
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (typeof Chart !== "undefined" && !window._complaintYRoomCenterReg) {
+    Chart.register({
+      id: "complaintYRoomCenter",
+      beforeDraw: function (chart) {
+        alignComplaintYLabelsToBarCenter(chart);
+      }
+    });
+    window._complaintYRoomCenterReg = true;
+  }
+
+  function cPick(row) {
+    const keys = Array.prototype.slice.call(arguments, 1);
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") {
+        return row[k];
+      }
+    }
+    return "";
+  }
+
+  function complaintRowTime(row) {
+    return String(
+      cPick(row, "TIME COMPLAINT", "TIME COMPLANT", "Time", "time") || ""
+    ).trim();
+  }
+
+  function complaintRowDateObj(row) {
+    const d = cPick(row, "Date", "date");
+    return parseYMD(String(d));
+  }
+
+  function complaintNoComplaintBundle(row) {
+    return [
+      cPick(row, "SUBJECT", "Subject", "subject"),
+      cPick(row, "CATEGORY", "Category", "category")
+    ]
+      .join(" ")
+      .toUpperCase()
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function isNoComplaintRow(row) {
+    let s = complaintNoComplaintBundle(row);
+    if (!s) return false;
+    s = s.replace(/COMPALINT/g, "COMPLAINT");
+    if (s.includes("NO COMPLAINT") || s.includes("NO COMPLANT")) return true;
+    if (s.includes("BELUM ADA COMPLAINT")) return true;
+    if (/\bBELUM\s+ADA\b/.test(s) && s.includes("COMPLAINT")) return true;
+    return false;
+  }
+
+  function normalizeComplaintRoomToken(s) {
+    s = String(s).trim();
+    if (!s) return "";
+    if (/^\d{1,2}$/.test(s)) return s.padStart(3, "0");
+    return s;
+  }
+
+  function complaintRoomStr(row) {
+    const raw = String(cPick(row, "ROOM", "Room", "room") || "").trim();
+    if (!raw) return "";
+    if (raw.indexOf(",") !== -1) {
+      return raw.split(",").map(function (part) {
+        return normalizeComplaintRoomToken(part.trim());
+      }).join(", ");
+    }
+    return normalizeComplaintRoomToken(raw);
+  }
+
+  /** 試算表常見拼字：與標準主題合併，篩選／圖表／統計一致 */
+  function normalizeComplaintSubject(s) {
+    s = String(s || "").trim().replace(/\s+/g, " ");
+    if (!s) return "";
+    if (/^ACTIMER$/i.test(s)) return "AC TIMER";
+    if (/^AC\s+TMER$/i.test(s)) return "AC TIMER";
+    return s;
+  }
+
+  function complaintSubjectStr(row) {
+    const s = normalizeComplaintSubject(cPick(row, "SUBJECT", "Subject", "subject"));
+    return s || "—";
+  }
+
+  function uniqueSubjectsInComplaintPeriod() {
+    const set = new Set();
+    for (let i = 0; i < COMPLAINTS_RAW.length; i++) {
+      const row = COMPLAINTS_RAW[i];
+      if (!complaintMatchesPeriod(row)) continue;
+      if (isNoComplaintRow(row)) continue;
+      set.add(complaintSubjectStr(row));
+    }
+    return Array.from(set).sort(function (a, b) {
+      if (a === "—" && b !== "—") return 1;
+      if (b === "—" && a !== "—") return -1;
+      return String(a).localeCompare(String(b), undefined, { numeric: true });
+    });
+  }
+
+  function complaintMatchesPeriod(row) {
+    const t = complaintRowDateObj(row);
+    if (!t) return false;
+    return rowMatchesPeriod(t);
+  }
+
+  function uniqueRoomsFromComplaints() {
+    const set = new Set();
+    for (let i = 0; i < COMPLAINTS_RAW.length; i++) {
+      const r = complaintRoomStr(COMPLAINTS_RAW[i]);
+      if (r) set.add(r);
+    }
+    return Array.from(set).sort(function (a, b) {
+      const na = Number(a);
+      const nb = Number(b);
+      if (!isNaN(na) && !isNaN(nb) && String(na) === String(a) && String(nb) === String(b)) {
+        return na - nb;
+      }
+      return String(a).localeCompare(String(b), undefined, { numeric: true });
+    });
+  }
+
+  /** 客訴折線圖副標：與營收折線圖相同，顯示「期間：」+ 期間按鈕文案 */
+  function updateComplaintTrendPeriodSubtitle() {
+    const sub = document.getElementById("subTitleComplaintTrend");
+    const periodBtn = document.getElementById("periodBtn");
+    if (!sub) return;
+    const ptxt = periodBtn ? String(periodBtn.textContent || "").trim() : "";
+    const prefix =
+      currentLang === "en" ? "Period: " : currentLang === "id" ? "Periode: " : "期間：";
+    sub.textContent = ptxt ? prefix + ptxt : "";
+  }
+
+  function updateComplaintFilterButtonText() {
+    const btn = document.getElementById("complaintFilterBtn");
+    if (!btn) return;
+    const rmMin = String((document.getElementById("complaintRoomMin") || {}).value || "").trim();
+    const rmMax = String((document.getElementById("complaintRoomMax") || {}).value || "").trim();
+    const ctMin = String((document.getElementById("complaintCountMin") || {}).value || "").trim();
+    const ctMax = String((document.getElementById("complaintCountMax") || {}).value || "").trim();
+    const hasRm = rmMin !== "" || rmMax !== "";
+    const hasCt = ctMin !== "" || ctMax !== "";
+    if (!hasRm && !hasCt) {
+      btn.textContent = "—";
+      return;
+    }
+    const L = LANGS[currentLang] || {};
+    const F = (L.filters || {});
+    const rmLab = F.complaintRoomRange || (currentLang === "en" ? "Room" : currentLang === "id" ? "Kamar" : "房號");
+    const ctLab = F.complaintCountRange || (currentLang === "en" ? "Count" : currentLang === "id" ? "Jumlah" : "次數");
+    const parts = [];
+    if (hasRm) parts.push(`${rmLab} ${rmMin || "—"}~${rmMax || "—"}`);
+    if (hasCt) parts.push(`${ctLab} ${ctMin || "—"}~${ctMax || "—"}`);
+    btn.textContent = parts.join(" / ");
+  }
+
+  function closeOtherDropdowns(keepEl) {
+    const all = document.querySelectorAll('.dropdown.show');
+    all.forEach(function (dd) {
+      if (keepEl && dd === keepEl) return;
+      dd.classList.remove('show');
+    });
+  }
+
+  // 點側欄空白/標題：收合所有下拉（但點在下拉內部不收合）
+  if (!window._filtersCloseBlankBound) {
+    const filtersEl = document.querySelector('.filters');
+    if (filtersEl) {
+      filtersEl.addEventListener('click', function (e) {
+        try {
+          const t = e && e.target ? e.target : null;
+          if (t && typeof t.closest === 'function' && t.closest('.dropdown')) return;
+          closeOtherDropdowns(null);
+        } catch (_) {}
+      });
+    }
+    window._filtersCloseBlankBound = true;
+  }
+
+  function syncCurrencyUIFromSelect() {
+    if (!currencySel) return;
+    if (currencyBtn) {
+      const opt = currencySel.options && currencySel.selectedIndex >= 0
+        ? currencySel.options[currencySel.selectedIndex]
+        : null;
+      currencyBtn.textContent = opt ? (opt.textContent || opt.value || "—") : (currencySel.value || "—");
+    }
+    if (currencyList) {
+      const cur = currencySel.value;
+      Array.from(currencyList.querySelectorAll('label')).forEach(function (lab) {
+        const v = lab && lab.dataset ? lab.dataset.value : "";
+        lab.style.background = v === cur ? "rgba(56,189,248,0.18)" : "";
+      });
+    }
+  }
+
+  function rebuildCurrencyDropdown() {
+    if (!currencySel || !currencyList) return;
+    currencyList.innerHTML = Array.from(currencySel.options).map(function (o) {
+      const v = o.value;
+      const t = o.textContent || o.value;
+      return `<label data-value="${v}">${t}</label>`;
+    }).join('');
+    currencyList.querySelectorAll('label').forEach(function (lab) {
+      lab.addEventListener('click', function () {
+        const v = lab.dataset.value || "";
+        currencySel.value = v;
+        currencySel.dispatchEvent(new Event('change', { bubbles: true }));
+        syncCurrencyUIFromSelect();
+        if (currencyDropdown) currencyDropdown.classList.remove('show');
+      });
+    });
+    syncCurrencyUIFromSelect();
+  }
+
+  function syncLangUIFromSelect() {
+    if (!langSel) return;
+    if (langBtn) {
+      const opt = langSel.options && langSel.selectedIndex >= 0
+        ? langSel.options[langSel.selectedIndex]
+        : null;
+      langBtn.textContent = opt ? (opt.textContent || opt.value || "—") : (langSel.value || "—");
+    }
+    if (langList) {
+      const cur = langSel.value;
+      Array.from(langList.querySelectorAll('label')).forEach(function (lab) {
+        const v = lab && lab.dataset ? lab.dataset.value : "";
+        lab.style.background = v === cur ? "rgba(56,189,248,0.18)" : "";
+      });
+    }
+  }
+
+  function rebuildLangDropdown() {
+    if (!langSel || !langList) return;
+    langList.innerHTML = Array.from(langSel.options).map(function (o) {
+      const v = o.value;
+      const t = o.textContent || o.value;
+      return `<label data-value="${v}">${t}</label>`;
+    }).join('');
+    langList.querySelectorAll('label').forEach(function (lab) {
+      lab.addEventListener('click', function () {
+        const v = lab.dataset.value || "";
+        langSel.value = v;
+        langSel.dispatchEvent(new Event('change', { bubbles: true }));
+        syncLangUIFromSelect();
+        if (langDropdown) langDropdown.classList.remove('show');
+      });
+    });
+    syncLangUIFromSelect();
+  }
+
+  function renderComplaints() {
+    const L = LANGS[currentLang];
+    const C = L.complaints || {};
+    updateComplaintTrendPeriodSubtitle();
+    const emptyEl = document.getElementById("complaintsEmpty");
+    const metaEl = document.getElementById("complaintsMeta");
+    const warnEl = document.getElementById("complaintsWarn");
+    const roomSel = document.getElementById("complaintRoomFilter");
+    const hideNo = document.getElementById("complaintHideNoComplaint");
+    const cRmMinEl = document.getElementById("complaintRoomMin");
+    const cRmMaxEl = document.getElementById("complaintRoomMax");
+    const cCtMinEl = document.getElementById("complaintCountMin");
+    const cCtMaxEl = document.getElementById("complaintCountMax");
+    updateComplaintFilterButtonText();
+    const theadC = document.getElementById("complaintsThead");
+    const tbodyC = document.getElementById("complaintsTbody");
+    const wrap = document.getElementById("complaintsTableWrap");
+    const sec = document.getElementById("complaintsSection");
+
+    if (!roomSel || !theadC || !tbodyC) return;
+
+    const chartRow = document.getElementById("complaintsChartsRow");
+    const toolBar = document.getElementById("complaintsToolbarTop");
+    const toolBarTable = document.getElementById("complaintsToolbarTable");
+    const tableTools = document.getElementById("complaintsTableTools");
+
+    if (!COMPLAINTS_RAW.length) {
+      if (emptyEl) {
+        emptyEl.hidden = false;
+        emptyEl.textContent = C.empty || "";
+      }
+      if (wrap) wrap.style.display = "none";
+      if (chartRow) chartRow.style.display = "none";
+      if (toolBar) toolBar.style.display = "none";
+      if (toolBarTable) toolBarTable.style.display = "none";
+      if (tableTools) tableTools.style.display = "none";
+      if (metaEl) metaEl.textContent = "";
+      if (warnEl) {
+        warnEl.hidden = true;
+        warnEl.textContent = "";
+      }
+      if (complaintBarChart) {
+        complaintBarChart.destroy();
+        complaintBarChart = null;
+      }
+      if (complaintTrendChart) {
+        complaintTrendChart.destroy();
+        complaintTrendChart = null;
+      }
+      if (sec) sec.style.opacity = "0.85";
+      return;
+    }
+
+    if (emptyEl) emptyEl.hidden = true;
+    if (wrap) wrap.style.display = "";
+    if (chartRow) chartRow.style.display = "";
+    if (toolBar) toolBar.style.display = "";
+    if (toolBarTable) toolBarTable.style.display = "";
+    if (tableTools) tableTools.style.display = "";
+    if (sec) sec.style.opacity = "1";
+
+    const roomSelTable = document.getElementById("complaintRoomFilterTable");
+    const subjSel = document.getElementById("complaintSubjectFilter");
+    const subjSelTable = document.getElementById("complaintSubjectFilterTable");
+    const prevRoom =
+      (roomSel && roomSel.value) || (roomSelTable && roomSelTable.value) || "";
+    roomSel.innerHTML = "";
+    const opt0 = document.createElement("option");
+    opt0.value = "";
+    opt0.textContent = C.allRooms || "All";
+    roomSel.appendChild(opt0);
+    uniqueRoomsFromComplaints().forEach(function (rm) {
+      const o = document.createElement("option");
+      o.value = rm;
+      o.textContent = rm;
+      roomSel.appendChild(o);
+    });
+    if (prevRoom && Array.from(roomSel.options).some(function (o) { return o.value === prevRoom; })) {
+      roomSel.value = prevRoom;
+    }
+    if (roomSelTable) {
+      roomSelTable.innerHTML = roomSel.innerHTML;
+      roomSelTable.value = roomSel.value;
+    }
+
+    const prevSubj =
+      (subjSel && subjSel.value) || (subjSelTable && subjSelTable.value) || "";
+    if (subjSel) {
+      subjSel.innerHTML = "";
+      const os0 = document.createElement("option");
+      os0.value = "";
+      os0.textContent = C.allSubjects || "All subjects";
+      subjSel.appendChild(os0);
+      uniqueSubjectsInComplaintPeriod().forEach(function (sj) {
+        const o = document.createElement("option");
+        o.value = sj;
+        o.textContent = sj;
+        subjSel.appendChild(o);
+      });
+      if (prevSubj && Array.from(subjSel.options).some(function (o) { return o.value === prevSubj; })) {
+        subjSel.value = prevSubj;
+      }
+    }
+    if (subjSelTable && subjSel) {
+      subjSelTable.innerHTML = subjSel.innerHTML;
+      subjSelTable.value = subjSel.value;
+    }
+
+    const roomFilter = roomSel.value;
+    const subjectFilter = subjSel ? subjSel.value : "";
+    const hideNoRows = hideNo && hideNo.checked;
+    const baseRows = [];
+    for (let i = 0; i < COMPLAINTS_RAW.length; i++) {
+      const row = COMPLAINTS_RAW[i];
+      if (!complaintMatchesPeriod(row)) continue;
+      if (roomFilter && complaintRoomStr(row) !== roomFilter) continue;
+      if (subjectFilter && complaintSubjectStr(row) !== subjectFilter) continue;
+      if (hideNoRows && isNoComplaintRow(row)) continue;
+      baseRows.push(row);
+    }
+
+    const rmMinRaw = cRmMinEl ? String(cRmMinEl.value || "").trim() : "";
+    const rmMaxRaw = cRmMaxEl ? String(cRmMaxEl.value || "").trim() : "";
+    const ctMinRaw = cCtMinEl ? String(cCtMinEl.value || "").trim() : "";
+    const ctMaxRaw = cCtMaxEl ? String(cCtMaxEl.value || "").trim() : "";
+    const rmMin = rmMinRaw ? Number(rmMinRaw) : null;
+    const rmMax = rmMaxRaw ? Number(rmMaxRaw) : null;
+    const ctMin = ctMinRaw ? Number(ctMinRaw) : null;
+    const ctMax = ctMaxRaw ? Number(ctMaxRaw) : null;
+    const hasRmRange = rmMinRaw !== "" || rmMaxRaw !== "";
+    const hasCtRange = ctMinRaw !== "" || ctMaxRaw !== "";
+    function asPureNumber(s) {
+      const t = String(s == null ? "" : s).trim();
+      if (!t) return null;
+      if (!/^\d+$/.test(t)) return null;
+      const n = Number(t);
+      return isNaN(n) ? null : n;
+    }
+    function roomInRange(rm) {
+      if (!hasRmRange) return true;
+      const n = asPureNumber(rm);
+      if (n === null) return false;
+      if (rmMin !== null && !isNaN(rmMin) && n < rmMin) return false;
+      if (rmMax !== null && !isNaN(rmMax) && n > rmMax) return false;
+      return true;
+    }
+    function countInRange(cnt) {
+      if (!hasCtRange) return true;
+      const n = Number(cnt) || 0;
+      if (ctMin !== null && !isNaN(ctMin) && n < ctMin) return false;
+      if (ctMax !== null && !isNaN(ctMax) && n > ctMax) return false;
+      return true;
+    }
+
+    const realForChartsBase = [];
+    for (let ri = 0; ri < COMPLAINTS_RAW.length; ri++) {
+      const row = COMPLAINTS_RAW[ri];
+      if (!complaintMatchesPeriod(row)) continue;
+      if (isNoComplaintRow(row)) continue;
+      if (roomFilter && complaintRoomStr(row) !== roomFilter) continue;
+      if (subjectFilter && complaintSubjectStr(row) !== subjectFilter) continue;
+      realForChartsBase.push(row);
+    }
+    const baseRoomCount = {};
+    for (let k0 = 0; k0 < realForChartsBase.length; k0++) {
+      const rw0 = realForChartsBase[k0];
+      const rm0 = complaintRoomStr(rw0) || "";
+      if (!rm0) continue;
+      baseRoomCount[rm0] = (baseRoomCount[rm0] || 0) + 1;
+    }
+    const candidateRooms = new Set();
+    for (let br = 0; br < baseRows.length; br++) {
+      const rm = String(complaintRoomStr(baseRows[br]) || "").trim();
+      if (rm) candidateRooms.add(rm);
+    }
+    const allowedRooms = new Set();
+    candidateRooms.forEach(function (rm) {
+      const cnt = baseRoomCount[rm] || 0;
+      if (roomInRange(rm) && countInRange(cnt)) allowedRooms.add(rm);
+    });
+    const displayRows = baseRows.filter(function (row) {
+      const rm = String(complaintRoomStr(row) || "").trim();
+      if (!rm) return !hasRmRange && !hasCtRange;
+      return allowedRooms.has(rm);
+    });
+    const _idx = new Map();
+    for (let ii = 0; ii < displayRows.length; ii++) _idx.set(displayRows[ii], ii);
+    const cSortState =
+      window._complaintSort &&
+      typeof window._complaintSort === "object" &&
+      typeof window._complaintSort.key === "string"
+        ? window._complaintSort
+        : { key: "date", dir: "asc" };
+    const cSortKey = cSortState.key || "date";
+    const cSortDir = cSortState.dir === "desc" ? "desc" : "asc";
+    function sortVal(row, key) {
+      switch (key) {
+        case "date": {
+          const t = complaintRowDateObj(row);
+          return t ? t.str : "";
+        }
+        case "room":
+          return complaintRoomStr(row);
+        case "subject":
+          return complaintSubjectStr(row);
+        case "fo":
+          return cPick(row, "FO", "Fo") || "";
+        case "eng":
+          return cPick(row, "ENG", "Eng") || "";
+        case "hk":
+          return cPick(row, "HK", "Hk") || "";
+        case "repair":
+          return cPick(row, "REPAIR", "Repair") || "";
+        case "time":
+          return complaintRowTime(row);
+        case "result":
+          return cPick(row, "RESULT", "Result") || "";
+        case "progress":
+          return cPick(row, "PROGRES", "PROGRESS", "Progress") || "";
+        default: {
+          const t = complaintRowDateObj(row);
+          return t ? t.str : "";
+        }
+      }
+    }
+    function cmp(a, b) {
+      if (cSortKey === "room") {
+        const ra = String(sortVal(a, "room") || "").trim();
+        const rb = String(sortVal(b, "room") || "").trim();
+        const na = Number(ra);
+        const nb = Number(rb);
+        let d = 0;
+        if (!isNaN(na) && !isNaN(nb) && String(na) === ra && String(nb) === rb) d = na - nb;
+        else d = ra.localeCompare(rb, undefined, { numeric: true });
+        if (d !== 0) return cSortDir === "desc" ? -d : d;
+      } else {
+        const va = String(sortVal(a, cSortKey) || "").trim();
+        const vb = String(sortVal(b, cSortKey) || "").trim();
+        let d = 0;
+        if (va !== vb) d = va.localeCompare(vb, undefined, { numeric: true });
+        if (d !== 0) return cSortDir === "desc" ? -d : d;
+      }
+      const n1 = Number(cPick(a, "No")) || 0;
+      const n2 = Number(cPick(b, "No")) || 0;
+      if (n1 !== n2) return n1 - n2;
+      return (_idx.get(a) || 0) - (_idx.get(b) || 0);
+    }
+    displayRows.sort(cmp);
+
+    let realInTable = 0;
+    for (let j = 0; j < displayRows.length; j++) {
+      if (!isNoComplaintRow(displayRows[j])) realInTable++;
+    }
+    if (metaEl && C.meta) {
+      metaEl.textContent = C.meta(displayRows.length, realInTable);
+    }
+
+    const realForCharts = realForChartsBase.filter(function (row) {
+      const rm = String(complaintRoomStr(row) || "").trim();
+      if (!rm) return false;
+      if (!hasRmRange && !hasCtRange) return true;
+      return allowedRooms.has(rm);
+    });
+    const roomCount = {};
+    const roomSubjectCount = {};
+    const monthCount = {};
+    const monthSubjectCount = {};
+    for (let k = 0; k < realForCharts.length; k++) {
+      const rw = realForCharts[k];
+      const rm = complaintRoomStr(rw) || "—";
+      roomCount[rm] = (roomCount[rm] || 0) + 1;
+      const subj = complaintSubjectStr(rw);
+      if (!roomSubjectCount[rm]) roomSubjectCount[rm] = {};
+      roomSubjectCount[rm][subj] = (roomSubjectCount[rm][subj] || 0) + 1;
+      const tmo = complaintRowDateObj(rw);
+      if (tmo) {
+        const mk = tmo.y * 100 + tmo.m;
+        monthCount[mk] = (monthCount[mk] || 0) + 1;
+        if (!monthSubjectCount[mk]) monthSubjectCount[mk] = {};
+        monthSubjectCount[mk][subj] = (monthSubjectCount[mk][subj] || 0) + 1;
+      }
+    }
+
+    const thN = COMPLAINT_REPEAT_THRESHOLD;
+    const hotRooms = Object.keys(roomCount)
+      .filter(function (k) { return k !== "—" && roomCount[k] >= thN; })
+      .sort(function (a, b) { return roomCount[b] - roomCount[a]; });
+    if (warnEl) {
+      if (hotRooms.length && C.warn) {
+        warnEl.hidden = false;
+        warnEl.textContent = C.warn(hotRooms.join(", "), thN);
+      } else {
+        warnEl.hidden = true;
+        warnEl.textContent = "";
+      }
+    }
+
+    const roomPairs = Object.keys(roomCount)
+      .map(function (k) { return [k, roomCount[k]]; })
+      .sort(function (a, b) {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        if (a[0] === "—") return 1;
+        if (b[0] === "—") return -1;
+        return String(a[0]).localeCompare(String(b[0]), undefined, { numeric: true });
+      });
+    const monthKeys = Object.keys(monthCount)
+      .map(function (x) { return Number(x); })
+      .filter(function (x) { return !isNaN(x); })
+      .sort(function (a, b) { return a - b; });
+
+    const subjTotalsForCharts = {};
+    Object.keys(roomSubjectCount).forEach(function (rm) {
+      const obj = roomSubjectCount[rm];
+      if (!obj) return;
+      Object.keys(obj).forEach(function (s) {
+        subjTotalsForCharts[s] = (subjTotalsForCharts[s] || 0) + obj[s];
+      });
+    });
+    const sortedSubjectsForCharts = Object.keys(subjTotalsForCharts).sort(function (a, b) {
+      const diff = subjTotalsForCharts[b] - subjTotalsForCharts[a];
+      if (diff !== 0) return diff;
+      return String(a).localeCompare(String(b), undefined, { numeric: true });
+    });
+    const topSubjectsForCharts = sortedSubjectsForCharts.slice(0, COMPLAINT_STACK_TOP_N);
+
+    const tickColor = "#94a3b8";
+    const gridColor = "rgba(148,163,184,0.22)";
+
+    if (complaintBarChart) {
+      complaintBarChart.destroy();
+      complaintBarChart = null;
+    }
+    const barCanvas = document.getElementById("complaintBarRooms");
+
+    if (barCanvas && roomPairs.length) {
+      const noRoomLbl = C.barNoRoomLabel || "—";
+      const chartRoomKeys = roomPairs.map(function (p) { return p[0]; });
+      const chartRoomLabels = chartRoomKeys.map(function (k) {
+        return k === "—" ? noRoomLbl : k;
+      });
+      const topSubjects = topSubjectsForCharts;
+      const otherLabel = C.barOtherSubjects || "Other";
+      const barStackBorder = "rgba(15,23,42,0.45)";
+      const barStackBorderW = 1;
+      const barEndRadius = 10;
+
+      var barHost = document.getElementById("complaintBarHost");
+      var nRooms = chartRoomKeys.length;
+      var barDesktop =
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(min-width: 769px)").matches;
+      var barLegendPx = 88;
+      var barChrome = barDesktop ? 16 : 14;
+      var barMaxRow = barDesktop ? 34 : 40;
+      var barRowPx;
+      var barHostH;
+      if (barDesktop) {
+        var barMinRowD = 10;
+        var barVh = typeof window.innerHeight === "number" ? window.innerHeight : 640;
+        var barHostCap = Math.min(560, Math.max(280, Math.floor(barVh * 0.58)));
+        var innerBudget = barHostCap - barLegendPx - barChrome;
+        if (innerBudget < 60) innerBudget = 60;
+        barRowPx = Math.floor(innerBudget / Math.max(1, nRooms));
+        barRowPx = Math.min(barMaxRow, barRowPx);
+        var barFloorD = 10;
+        if (barRowPx < barMinRowD) {
+          if (nRooms * barMinRowD > innerBudget) {
+            barRowPx = Math.max(barFloorD, Math.floor(innerBudget / Math.max(1, nRooms)));
+          } else {
+            barRowPx = barMinRowD;
+          }
+        }
+        barHostH = Math.round(nRooms * barRowPx + barLegendPx + barChrome);
+        if (barHostH > barHostCap) {
+          barHostH = barHostCap;
+          barRowPx = Math.max(barFloorD, Math.floor((barHostH - barLegendPx - barChrome) / Math.max(1, nRooms)));
+        }
+      } else {
+        /* 手機：房號少時每列加高（房號／數字標籤較不擠）；房號多時維持可捲動 */
+        var readableMinRow = 18;
+        var innerTarget =
+          nRooms <= 16
+            ? nRooms * 30
+            : Math.max(nRooms * readableMinRow, 288);
+        barRowPx = Math.floor(innerTarget / Math.max(1, nRooms));
+        barRowPx = Math.min(barMaxRow, Math.max(readableMinRow, barRowPx));
+        barHostH = Math.round(nRooms * barRowPx + barLegendPx + barChrome);
+        var barMobileCanvasCap = 4000;
+        if (barHostH > barMobileCanvasCap) {
+          barHostH = barMobileCanvasCap;
+          barRowPx = Math.max(12, Math.floor((barHostH - barLegendPx - barChrome) / Math.max(1, nRooms)));
+        }
+      }
+      var barYTick = barRowPx < 14 ? 8 : barRowPx < 20 ? 9 : barRowPx < 26 ? 10 : 11;
+      if (barHost) {
+        barHost.style.height = barHostH + "px";
+        /* 與 height 一致，避免直向 flex 版面把 host 壓到比圖表矮、canvas 變 0 高 */
+        barHost.style.minHeight = barHostH + "px";
+        if (!barDesktop) {
+          barHost.style.width = "100%";
+          void barHost.offsetWidth;
+          var barVp = document.getElementById("complaintBarViewport");
+          if (barVp) barVp.scrollTop = 0;
+        }
+      }
+      var barThicknessPx = Math.max(2, Math.min(barMaxRow, Math.round(barRowPx)));
+      /* Chart.js 實際分配的「每列高度」常大於我們用 barHost 估算的 barRowPx（圖例／軸實際吃高較少），
+       * 手機若仍設 maxBarThickness≈barRowPx，長條會被掐細、行距看起來很寬；桌機維持上限以免過粗。 */
+      /* 手機用數字 borderRadius，避免部分 WebView 對物件寫法支援不佳 */
+      var barBorderRadius = barDesktop
+        ? { topLeft: 0, bottomLeft: 0, topRight: barEndRadius, bottomRight: barEndRadius }
+        : 6;
+
+      const datasets = [];
+      for (let si = 0; si < topSubjects.length; si++) {
+        const subj = topSubjects[si];
+        var dsBar = {
+          label: subj,
+          data: chartRoomKeys.map(function (room) {
+            const o = roomSubjectCount[room];
+            return o && o[subj] ? o[subj] : 0;
+          }),
+          backgroundColor: COMPLAINT_STACK_COLORS[si % COMPLAINT_STACK_COLORS.length],
+          stack: "subj",
+          borderColor: barStackBorder,
+          borderWidth: barStackBorderW,
+          borderRadius: barBorderRadius,
+          borderSkipped: false
+        };
+        if (barDesktop) dsBar.maxBarThickness = barThicknessPx;
+        datasets.push(dsBar);
+      }
+
+      const otherCounts = chartRoomKeys.map(function (room) {
+        const o = roomSubjectCount[room] || {};
+        let sum = 0;
+        Object.keys(o).forEach(function (s) {
+          if (topSubjects.indexOf(s) === -1) sum += o[s];
+        });
+        return sum;
+      });
+      if (otherCounts.some(function (v) { return v > 0; })) {
+        var dsOther = {
+          label: otherLabel,
+          data: otherCounts,
+          backgroundColor: COMPLAINT_STACK_COLORS[COMPLAINT_STACK_COLORS.length - 1],
+          stack: "subj",
+          borderColor: barStackBorder,
+          borderWidth: barStackBorderW,
+          borderRadius: barBorderRadius,
+          borderSkipped: false
+        };
+        if (barDesktop) dsOther.maxBarThickness = barThicknessPx;
+        datasets.push(dsOther);
+      }
+
+      const barTooltipTotal =
+        currentLang === "zh"
+          ? function (t) { return "合計 " + t + " 筆"; }
+          : currentLang === "id"
+          ? function (t) { return "Jumlah: " + t; }
+          : function (t) { return "Total: " + t; };
+
+      var barCanvasDpr =
+        typeof window.devicePixelRatio === "number" && window.devicePixelRatio > 0
+          ? Math.min(window.devicePixelRatio, 2.5)
+          : 1;
+
+      var complaintBarSegmentLabelsPlugin = {
+        id: "complaintBarSegmentLabels",
+        afterDatasetsDraw: function (chart) {
+          try {
+            var ctx = chart.ctx;
+            if (!ctx) return;
+            var fontPx = barDesktop
+              ? barRowPx < 22 ? 10 : 12
+              : Math.max(7, Math.min(10, Math.round(barRowPx * 0.5)));
+            ctx.save();
+            ctx.font = "800 " + fontPx + "px system-ui,Segoe UI,sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            var dLen = chart.data.datasets.length;
+            for (var di = 0; di < dLen; di++) {
+              var meta = chart.getDatasetMeta(di);
+              if (!meta || meta.hidden) continue;
+              var ds = chart.data.datasets[di];
+              if (!ds || !meta.data) continue;
+              for (var i = 0; i < meta.data.length; i++) {
+                var bar = meta.data[i];
+                if (!bar || bar.skip) continue;
+                var v = Number(ds.data[i]);
+                if (!(v > 0) || isNaN(v)) continue;
+                var props = bar.getProps(["x", "y", "base", "horizontal"], true);
+                if (props.horizontal !== true) continue;
+                var cx = Math.round((props.x + props.base) / 2);
+                var cy = Math.round(props.y);
+                var segW = Math.abs(props.x - props.base);
+                if (segW < 8) continue;
+                if (segW < 14 && v < 2) continue;
+                var txt = String(Math.round(v));
+                ctx.fillStyle = "#0f172a";
+                ctx.strokeStyle = "rgba(255,255,255,0.35)";
+                ctx.lineWidth = fontPx <= 8 ? 1.5 : 2;
+                ctx.strokeText(txt, cx, cy);
+                ctx.fillText(txt, cx, cy);
+              }
+            }
+            ctx.restore();
+          } catch (eSegLbl) {}
+        }
+      };
+
+      function mountComplaintBarChart() {
+        try {
+          var attached =
+            typeof Chart.getChart === "function" ? Chart.getChart(barCanvas) : null;
+          if (attached) attached.destroy();
+        } catch (eBarGc) {}
+        if (complaintBarChart) {
+          try {
+            complaintBarChart.destroy();
+          } catch (eBarDes) {}
+          complaintBarChart = null;
+        }
+        complaintBarChart = new Chart(barCanvas, {
+          type: "bar",
+          plugins: [complaintBarSegmentLabelsPlugin],
+          data: {
+            labels: chartRoomLabels,
+            datasets: datasets
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            /* 手機勿固定 1：Retina 會把 1× canvas 放大顯示，軸／圖例／自繪數字都變糊 */
+            devicePixelRatio: barCanvasDpr,
+            layout: {
+              padding: { bottom: 2, top: 0, left: 0, right: barDesktop ? 8 : 10 }
+            },
+            datasets: {
+              bar: {
+                categoryPercentage: 1,
+                barPercentage: 1
+              }
+            },
+            plugins: {
+              legend: {
+                display: true,
+                position: "bottom",
+                align: "center",
+                maxHeight: barDesktop ? 58 : 68,
+                labels: {
+                  boxWidth: 10,
+                  boxHeight: 10,
+                  font: { size: barDesktop ? 9 : 10, weight: "500", family: "system-ui,Segoe UI,sans-serif" },
+                  color: "#f8fafc",
+                  padding: barDesktop ? 4 : 7,
+                  usePointStyle: true,
+                  pointStyle: "rect",
+                  generateLabels: function (chart) {
+                    return chart.data.datasets.map(function (dataset, i) {
+                      const txt = complaintTruncLegend(dataset.label, 48);
+                      return {
+                        text: txt || "(—)",
+                        fillStyle: dataset.backgroundColor,
+                        strokeStyle: dataset.backgroundColor,
+                        lineWidth: 0,
+                        fontColor: "#f8fafc",
+                        hidden: !chart.isDatasetVisible(i),
+                        datasetIndex: i,
+                        index: i
+                      };
+                    });
+                  }
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function (ctx) {
+                    var px = ctx.parsed && ctx.parsed.x;
+                    var v = px != null && !isNaN(px) ? px : ctx.raw;
+                    return String(ctx.dataset.label) + ": " + v;
+                  },
+                  footer: function (items) {
+                    if (!items.length) return "";
+                    let t = 0;
+                    for (let fi = 0; fi < items.length; fi++) {
+                      t += Number(items[fi].parsed.x) || 0;
+                    }
+                    return barTooltipTotal(t);
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                stacked: true,
+                beginAtZero: true,
+                ticks: {
+                  color: tickColor,
+                  precision: 0,
+                  stepSize: 1,
+                  font: { size: barDesktop ? 11 : 9 }
+                },
+                grid: { color: "rgba(148,163,184,0.2)", lineWidth: 1 }
+              },
+              y: {
+                stacked: false,
+                ticks: {
+                  color: "#f1f5f9",
+                  font: { size: barDesktop ? barYTick : Math.min(barYTick, 10), weight: "600" },
+                  autoSkip: false,
+                  padding: 4
+                },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+        if (!barDesktop && complaintBarChart) {
+          var barChartRef = complaintBarChart;
+          [0, 80, 250, 500].forEach(function (ms) {
+            setTimeout(function () {
+              try {
+                if (
+                  barChartRef &&
+                  barChartRef === complaintBarChart &&
+                  barChartRef.canvas &&
+                  barChartRef.canvas.isConnected
+                ) {
+                  barChartRef.resize();
+                }
+              } catch (e2) {}
+            }, ms);
+          });
+        }
+      }
+
+      /* 手機常見：首次 render 時 flex 尚未結束，容器寬度=0 → Chart 不畫。延遲建立 + 後備 minWidth（GPT 建議與實作一致） */
+      if (!barDesktop && barHost) {
+        var barCardEl = document.getElementById("complaintBarCard");
+        var bw = barHost.getBoundingClientRect().width;
+        if (bw < 48 && barCardEl) {
+          bw = barCardEl.getBoundingClientRect().width;
+        }
+        if (bw < 48) {
+          var vw = typeof window.innerWidth === "number" ? window.innerWidth : 360;
+          barHost.style.minWidth = Math.max(260, vw - 32) + "px";
+          void barHost.offsetWidth;
+        }
+        if (typeof requestAnimationFrame === "function") {
+          complaintBarMountGen += 1;
+          var barMountGen = complaintBarMountGen;
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              if (barMountGen !== complaintBarMountGen) return;
+              mountComplaintBarChart();
+            });
+          });
+        } else {
+          complaintBarMountGen += 1;
+          var barMountGenT = complaintBarMountGen;
+          setTimeout(function () {
+            if (barMountGenT !== complaintBarMountGen) return;
+            mountComplaintBarChart();
+          }, 0);
+        }
+      } else {
+        mountComplaintBarChart();
+      }
+    } else if (barCanvas && complaintBarChart === null) {
+      var barVpClear = document.getElementById("complaintBarViewport");
+      if (barVpClear) barVpClear.scrollTop = 0;
+      var barHostClear = document.getElementById("complaintBarHost");
+      if (barHostClear) {
+        barHostClear.style.height = "";
+        barHostClear.style.minHeight = "";
+      }
+      const ctx = barCanvas.getContext("2d");
+      if (ctx) ctx.clearRect(0, 0, barCanvas.width, barCanvas.height);
+    }
+
+    if (complaintTrendChart) {
+      complaintTrendChart.destroy();
+      complaintTrendChart = null;
+    }
+    const trendCanvas = document.getElementById("complaintLineTrend");
+    if (trendCanvas) {
+      if (monthKeys.length) {
+        const distinctY = new Set(monthKeys.map(function (k) { return Math.floor(k / 100); }));
+        const showY = distinctY.size > 1;
+        const trendLabels = monthKeys.map(function (k) {
+          const y = Math.floor(k / 100);
+          const m = k % 100;
+          if (!showY) return tableMonthLabel(m);
+          return String(y).slice(-2) + "/" + tableMonthLabel(m);
+        });
+        const otherLabelTr = C.barOtherSubjects || "Other";
+        const trendDatasets = [];
+        if (subjectFilter) {
+          trendDatasets.push({
+            label: complaintTruncLegend(subjectFilter, 36),
+            data: monthKeys.map(function (mk) {
+              const o = monthSubjectCount[mk];
+              return o && o[subjectFilter] ? o[subjectFilter] : 0;
+            }),
+            borderColor: COMPLAINT_STACK_COLORS[0],
+            backgroundColor: "rgba(56,189,248,0.15)",
+            fill: true,
+            tension: 0.25,
+            pointRadius: 4,
+            pointBackgroundColor: COMPLAINT_STACK_COLORS[0],
+            borderWidth: 2
+          });
+        } else {
+          const topT = topSubjectsForCharts;
+          for (let di = 0; di < topT.length; di++) {
+            const sj = topT[di];
+            trendDatasets.push({
+              label: complaintTruncLegend(sj, 36),
+              data: monthKeys.map(function (mk) {
+                const o = monthSubjectCount[mk];
+                return o && o[sj] ? o[sj] : 0;
+              }),
+              borderColor: COMPLAINT_STACK_COLORS[di % COMPLAINT_STACK_COLORS.length],
+              backgroundColor: "transparent",
+              fill: false,
+              tension: 0.25,
+              pointRadius: 3,
+              pointBackgroundColor: COMPLAINT_STACK_COLORS[di % COMPLAINT_STACK_COLORS.length],
+              borderWidth: 2
+            });
+          }
+          const otherTrendData = monthKeys.map(function (mk) {
+            const o = monthSubjectCount[mk] || {};
+            let sumO = 0;
+            Object.keys(o).forEach(function (sj) {
+              if (topT.indexOf(sj) === -1) sumO += o[sj];
+            });
+            return sumO;
+          });
+          if (otherTrendData.some(function (v) { return v > 0; })) {
+            trendDatasets.push({
+              label: complaintTruncLegend(otherLabelTr, 28),
+              data: otherTrendData,
+              borderColor: COMPLAINT_STACK_COLORS[COMPLAINT_STACK_COLORS.length - 1],
+              backgroundColor: "transparent",
+              fill: false,
+              tension: 0.25,
+              pointRadius: 3,
+              pointBackgroundColor: COMPLAINT_STACK_COLORS[COMPLAINT_STACK_COLORS.length - 1],
+              borderWidth: 2
+            });
+          }
+          if (trendDatasets.length === 1) {
+            trendDatasets[0].fill = true;
+            trendDatasets[0].backgroundColor = "rgba(56,189,248,0.15)";
+            trendDatasets[0].pointRadius = 4;
+          }
+        }
+        if (!subjectFilter && trendDatasets.length > 1) {
+          trendDatasets.push({
+            label: complaintTruncLegend(C.trendTotal || "Total", 16),
+            data: monthKeys.map(function (mk) {
+              return monthCount[mk] || 0;
+            }),
+            borderColor: "#f8fafc",
+            backgroundColor: "transparent",
+            fill: false,
+            borderDash: [6, 4],
+            tension: 0.25,
+            pointRadius: 3,
+            pointBackgroundColor: "#f8fafc",
+            borderWidth: 2
+          });
+        }
+        const trendLegendOn = trendDatasets.length > 1;
+        var trendAspect = trendLegendOn ? 1.05 : 1.35;
+        var trendHost = document.getElementById("complaintTrendHost");
+        if (trendHost) trendHost.style.height = "";
+        var complaintTrendMobile =
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(max-width: 768px)").matches;
+        var ctAxis = complaintTrendMobile ? 9 : 11;
+        var ctLegend = complaintTrendMobile ? 9 : 10;
+        complaintTrendChart = new Chart(trendCanvas, {
+          type: "line",
+          data: {
+            labels: trendLabels,
+            datasets: trendDatasets
+          },
+          options: {
+            /* 與營收 trendChart 相同：一律維持比例，避免手機 WebKit 與固定高度打架 */
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: complaintTrendMobile
+              ? Math.max(trendAspect * 1.45, trendLegendOn ? 1.72 : 1.95)
+              : trendAspect,
+            layout: {
+              padding: { top: 0, right: 0, bottom: 0, left: 0 }
+            },
+            plugins: {
+              legend: {
+                display: trendLegendOn,
+                position: "bottom",
+                align: "center",
+                labels: {
+                  boxWidth: 10,
+                  boxHeight: 10,
+                  padding: complaintTrendMobile ? 4 : 6,
+                  font: { size: ctLegend, weight: "500", family: "system-ui,Segoe UI,sans-serif" },
+                  color: "#e5e7eb",
+                  usePointStyle: true,
+                  pointStyle: "line"
+                }
+              },
+              tooltip: {
+                mode: "index",
+                intersect: false,
+                callbacks: {
+                  label: function (ctx) {
+                    const v = ctx.parsed.y;
+                    const lab = ctx.dataset.label != null ? String(ctx.dataset.label) : "";
+                    return lab ? lab + ": " + v : String(v);
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  color: tickColor,
+                  precision: 0,
+                  font: { size: ctAxis }
+                },
+                grid: { color: gridColor }
+              },
+              x: {
+                ticks: {
+                  color: "#e5e7eb",
+                  font: { size: ctAxis },
+                  maxRotation: complaintTrendMobile ? 60 : 45,
+                  minRotation: 0
+                },
+                grid: { color: "rgba(148,163,184,0.15)" }
+              }
+            }
+          }
+        });
+      } else {
+        var trendHostClear = document.getElementById("complaintTrendHost");
+        if (trendHostClear) trendHostClear.style.height = "";
+        const ctx = trendCanvas.getContext("2d");
+        if (ctx) ctx.clearRect(0, 0, trendCanvas.width, trendCanvas.height);
+      }
+    }
+
+    /* 手機版面／網址列伸縮後，Chart 有時首次量到寬高為 0；延遲 resize 可補救客訴圖空白 */
+    (function complaintChartsResizeSoon() {
+      function doResize() {
+        try {
+          if (complaintBarChart) complaintBarChart.resize();
+        } catch (e) {}
+        try {
+          if (complaintTrendChart) complaintTrendChart.resize();
+        } catch (e) {}
+      }
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(function () {
+          doResize();
+          requestAnimationFrame(doResize);
+        });
+      } else {
+        setTimeout(doResize, 0);
+        setTimeout(doResize, 100);
+      }
+    })();
+
+    theadC.innerHTML = "";
+    tbodyC.innerHTML = "";
+
+    const trh = document.createElement("tr");
+    function setSort(nextKey) {
+      const cur =
+        window._complaintSort &&
+        typeof window._complaintSort === "object" &&
+        typeof window._complaintSort.key === "string"
+          ? window._complaintSort
+          : { key: "date", dir: "asc" };
+      const same = cur.key === nextKey;
+      window._complaintSort = {
+        key: nextKey,
+        dir: same && cur.dir === "asc" ? "desc" : "asc"
+      };
+      renderComplaints();
+    }
+    function addThCompl(tr, text) {
+      const th = document.createElement("th");
+      th.textContent = text || "";
+      tr.appendChild(th);
+    }
+    function addThSortable(tr, key, label) {
+      const th = document.createElement("th");
+      th.className = "sortable" + (key === cSortKey ? " active" : "");
+      th.setAttribute("role", "button");
+      th.setAttribute("tabindex", "0");
+      th.setAttribute(
+        "aria-sort",
+        key === cSortKey ? (cSortDir === "desc" ? "descending" : "ascending") : "none"
+      );
+      const spanLabel = document.createElement("span");
+      spanLabel.textContent = label || "";
+      const spanI = document.createElement("span");
+      spanI.className = "si";
+      spanI.textContent = key === cSortKey ? (cSortDir === "desc" ? "▼" : "▲") : "";
+      th.appendChild(spanLabel);
+      th.appendChild(spanI);
+      th.addEventListener("click", function () { setSort(key); });
+      th.addEventListener("keydown", function (e) {
+        if (!e) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setSort(key);
+        }
+      });
+      tr.appendChild(th);
+    }
+    addThSortable(trh, "date", C.colDate);
+    addThSortable(trh, "room", C.colRoom);
+    addThSortable(trh, "subject", C.colSubject);
+    addThSortable(trh, "fo", C.colFo);
+    addThSortable(trh, "eng", C.colEng);
+    addThSortable(trh, "hk", C.colHk);
+    addThSortable(trh, "repair", C.colRepair);
+    addThSortable(trh, "time", C.colTime);
+    addThSortable(trh, "result", C.colResult);
+    addThSortable(trh, "progress", C.colProgress);
+    theadC.appendChild(trh);
+
+    function cell(v) {
+      if (v === null || v === undefined) return "";
+      if (typeof v === "number" && !isNaN(v)) return String(v);
+      return String(v);
+    }
+
+    for (let r = 0; r < displayRows.length; r++) {
+      const row = displayRows[r];
+      const tr = document.createElement("tr");
+      if (isNoComplaintRow(row)) tr.style.opacity = "0.75";
+      const tdt = complaintRowDateObj(row);
+      const tdDate = document.createElement("td");
+      tdDate.textContent = tdt ? tdt.str : "";
+      tr.appendChild(tdDate);
+      [
+        cell(complaintRoomStr(row)),
+        cell(complaintSubjectStr(row)),
+        cell(cPick(row, "FO", "Fo")),
+        cell(cPick(row, "ENG", "Eng")),
+        cell(cPick(row, "HK", "Hk")),
+        cell(cPick(row, "REPAIR", "Repair")),
+        cell(complaintRowTime(row)),
+        cell(cPick(row, "RESULT", "Result")),
+        cell(cPick(row, "PROGRES", "PROGRESS", "Progress"))
+      ].forEach(function (text) {
+        const td = document.createElement("td");
+        td.textContent = text;
+        tr.appendChild(td);
+      });
+      tbodyC.appendChild(tr);
+    }
+  }
+
+  // ===== 表格渲染 =====
+  function render(){
+    updatePeriodButtonText();
+    const rows = filterData();
+    const mode = currentMode();
+    const cur  = currencySel.value;
+    const L    = LANGS[currentLang];
+
+    // 清空表格
+    thead.innerHTML = '';
+    tbody.innerHTML = '';
+    tfoot.innerHTML = '';
+
+    const isDaily = (mode === 'daily');
+
+    // 更新折線圖標題，顯示目前的年/月區間 (YYYY-All 或 YYYY-MM)
+    (function updateLineTitle(){
+      const L = LANGS[currentLang];
+      const title = document.getElementById("titleLine");
+      const sub = document.getElementById("subTitleLine");
+      const ptxt = periodBtn ? periodBtn.textContent : '';
+      if (title) title.textContent = L.chartTitles.line;
+      if (sub) {
+        const prefix = (currentLang === 'en') ? 'Period: '
+                     : (currentLang === 'id') ? 'Periode: '
+                     : '期間：';
+        sub.textContent = ptxt ? (prefix + ptxt) : '';
+      }
+      updateComplaintTrendPeriodSubtitle();
+    })();
+
+    // 更新年/月切換按鈕的文字
+    updateModeToggleLabels();
+
+    const rSortState =
+      window._revenueSort &&
+      typeof window._revenueSort === "object" &&
+      typeof window._revenueSort.key === "string"
+        ? window._revenueSort
+        : { key: isDaily ? "date" : "ym", dir: "asc" };
+    const rSortKey = rSortState.key || (isDaily ? "date" : "ym");
+    const rSortDir = rSortState.dir === "desc" ? "desc" : "asc";
+    function setRevenueSort(nextKey) {
+      const curS =
+        window._revenueSort &&
+        typeof window._revenueSort === "object" &&
+        typeof window._revenueSort.key === "string"
+          ? window._revenueSort
+          : { key: isDaily ? "date" : "ym", dir: "asc" };
+      const same = curS.key === nextKey;
+      window._revenueSort = {
+        key: nextKey,
+        dir: same && curS.dir === "asc" ? "desc" : "asc"
+      };
+      render();
+    }
+
+    // 小工具：建立 <th>
+    function addTh(tr, text, {num=false, extra=false} = {}){
+      const th = document.createElement('th');
+      th.textContent = text;
+      if (num)   th.classList.add('num');
+      if (extra) th.classList.add('mobile-extra');
+      tr.appendChild(th);
+    }
+    function addThSortable(tr, key, text, {num=false, extra=false} = {}) {
+      const th = document.createElement('th');
+      th.className = "sortable" + (key === rSortKey ? " active" : "");
+      if (num) th.classList.add('num');
+      if (extra) th.classList.add('mobile-extra');
+      th.setAttribute("role", "button");
+      th.setAttribute("tabindex", "0");
+      th.setAttribute(
+        "aria-sort",
+        key === rSortKey ? (rSortDir === "desc" ? "descending" : "ascending") : "none"
+      );
+      const spanLabel = document.createElement("span");
+      spanLabel.textContent = text || "";
+      const spanI = document.createElement("span");
+      spanI.className = "si";
+      spanI.textContent = key === rSortKey ? (rSortDir === "desc" ? "▼" : "▲") : "";
+      th.appendChild(spanLabel);
+      th.appendChild(spanI);
+      th.addEventListener("click", function () { setRevenueSort(key); });
+      th.addEventListener("keydown", function (e) {
+        if (!e) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setRevenueSort(key);
+        }
+      });
+      tr.appendChild(th);
+    }
+
+    // 小工具：建立 <td>
+    function addTd(tr, text, {num=false, extra=false, calc=false} = {}){
+      const td = document.createElement('td');
+      td.textContent = text;
+      if (num)   td.classList.add('num');
+      if (extra) td.classList.add('mobile-extra');
+      if (calc)  td.classList.add('calc');
+      tr.appendChild(td);
+    }
+
+    // ===== 建立表頭 =====
+    const trh = document.createElement('tr');
+
+    if (isDaily) {
+      // 星期 / 日期 一律顯示
+      addThSortable(trh, "weekday", L.table.weekday, { num:false, extra:false });
+      addThSortable(trh, "date",    L.table.date,    { num:false, extra:false });
+
+      // 房務 / 其他收入欄位
+      COLS.forEach(c => {
+        const label = L.metricOpts.find(m => m.val === c.key)?.text || c.key;
+        const isRoom = (c.key === 'Room Revenue'); // 房務欄位
+        // 手機預設：只顯示房務，其它收入標成 mobile-extra
+        addThSortable(trh, `metric:${c.key}`, label, { num:true, extra: !isRoom });
+      });
+
+      // 總收入：主要欄位（不隱藏）
+      addThSortable(trh, "total", L.table.total, { num:true, extra:false });
+
+      // Sold / RNA / RNO：額外欄位（mobile-extra）
+      addThSortable(trh, "extra:Room Sold",  L.table.roomSold, { num:true, extra:true });
+      addThSortable(trh, "extra:RNA Actual", L.table.rna,      { num:true, extra:true });
+      addThSortable(trh, "extra:RNO Budget", L.table.rno,      { num:true, extra:true });
+
+      // 住房率%、平均房價：主要欄位（不隱藏）
+      addThSortable(trh, "occ", L.table.occ, { num:true, extra:false });
+      addThSortable(trh, "arr", L.table.arr, { num:true, extra:false });
+    } else {
+      // 年 / 月 一律顯示
+      addThSortable(trh, "year",  L.table.year,  { num:false, extra:false });
+      addThSortable(trh, "month", L.table.month, { num:false, extra:false });
+
+      // 房務 / 其他收入欄位
+      COLS.forEach(c => {
+        const label = L.metricOpts.find(m => m.val === c.key)?.text || c.key;
+        const isRoom = (c.key === 'Room Revenue');
+        addThSortable(trh, `metric:${c.key}`, label, { num:true, extra: !isRoom });
+      });
+
+      // 總收入：主要欄位
+      addThSortable(trh, "total", L.table.total, { num:true, extra:false });
+
+      // Sold / RNA / RNO：額外欄位
+      addThSortable(trh, "extra:Room Sold",  L.table.roomSold, { num:true, extra:true });
+      addThSortable(trh, "extra:RNA Actual", L.table.rna,      { num:true, extra:true });
+      addThSortable(trh, "extra:RNO Budget", L.table.rno,      { num:true, extra:true });
+
+      // 住房率%、平均房價：主要欄位
+      addThSortable(trh, "occ", L.table.occ, { num:true, extra:false });
+      addThSortable(trh, "arr", L.table.arr, { num:true, extra:false });
+    }
+
+    thead.appendChild(trh);
+
+    // ===== 表格內容 =====
+    let grand = COLS.reduce((o,c)=>(o[c.key]=0,o),{}),
+        grandTotal = 0;
+    grand['Room Sold']  = 0;
+    grand['RNA Actual'] = 0;
+    grand['RNO Budget'] = 0;
+
+    if (isDaily) {
+      const dm = getDailyYM();
+      const dayRowsBase = dm
+        ? rows.filter(r => {
+            const t = parseYMD(r.Date);
+            return t && t.y === dm.y && t.m === dm.m;
+          })
+        : [];
+      const dayIdx = new Map();
+      for (let i0 = 0; i0 < dayRowsBase.length; i0++) dayIdx.set(dayRowsBase[i0], i0);
+      const dayCache = new Map();
+      function dayVal(r, key) {
+        const t = parseYMD(r.Date);
+        if (key === "weekday") return t ? t.wd : -1;
+        if (key === "date") return t ? (t.y * 10000 + t.m * 100 + t.d) : 0;
+        if (key === "ym") return t ? (t.y * 100 + t.m) : 0;
+        if (key === "total" || key === "occ" || key === "arr") {
+          if (dayCache.has(r)) return dayCache.get(r)[key];
+          const rs = toNumber(r['Room Sold']);
+          const ra = toNumber(r['RNA Actual']);
+          let rowTotal = 0;
+          for (const c of COLS) rowTotal += toNumber(r[c.key]);
+          const occ = (ra > 0) ? (rs / ra * 100) : 0;
+          const arr = (rs > 0) ? idrTo(cur, toNumber(r["Room Revenue"]) / rs) : 0;
+          const pack = { total: idrTo(cur, rowTotal), occ: occ, arr: arr };
+          dayCache.set(r, pack);
+          return pack[key];
+        }
+        if (key.startsWith("metric:")) {
+          const k = key.slice("metric:".length);
+          return idrTo(cur, toNumber(r[k]));
+        }
+        if (key.startsWith("extra:")) {
+          const k = key.slice("extra:".length);
+          return toNumber(r[k]);
+        }
+        return 0;
+      }
+      const dayRows = dayRowsBase.slice().sort(function (a, b) {
+        let d = 0;
+        if (rSortKey === "weekday" || rSortKey === "date" || rSortKey === "ym" ||
+            rSortKey === "total" || rSortKey === "occ" || rSortKey === "arr" ||
+            rSortKey.startsWith("metric:") || rSortKey.startsWith("extra:")) {
+          d = dayVal(a, rSortKey) - dayVal(b, rSortKey);
+        }
+        if (!isFinite(d) || d === 0) {
+          d = dayVal(a, "date") - dayVal(b, "date");
+        }
+        if (d !== 0) return rSortDir === "desc" ? -d : d;
+        return (dayIdx.get(a) || 0) - (dayIdx.get(b) || 0);
+      });
+
+      for (const r of dayRows) {
+        const t = parseYMD(r.Date);
+        const tr = document.createElement('tr');
+
+        // 星期 / 日期（主要欄位）
+        addTd(tr, L.weekdays[t.wd], { num:false, extra:false });
+        addTd(tr, t.str,            { num:false, extra:false });
+
+        // 房務 / 其他收入
+        let rowTotal = 0;
+        for (const c of COLS) {
+          const v = toNumber(r[c.key]);
+          rowTotal += v;
+          grand[c.key] += v;
+
+          const isRoom = (c.key === 'Room Revenue');
+          addTd(tr, formatCurrency(idrTo(cur, v), cur), {
+            num: true,
+            extra: !isRoom
+          });
+        }
+
+        grandTotal += rowTotal;
+        addTd(tr, formatCurrency(idrTo(cur, rowTotal), cur), {
+          num: true,
+          calc: true,
+          extra: false   // 總收入：主要欄位
+        });
+
+        // Sold / RNA / RNO
+        const rs = toNumber(r['Room Sold']);
+        const ra = toNumber(r['RNA Actual']);
+        const rb = toNumber(r['RNO Budget']);
+
+        addTd(tr, rs || 0, { num:true, extra:true });
+        addTd(tr, ra || 0, { num:true, extra:true });
+        addTd(tr, rb || 0, { num:true, extra:true });
+
+        grand['Room Sold']  += rs;
+        grand['RNA Actual'] += ra;
+        grand['RNO Budget'] += rb;
+
+        // 住房率% / 平均房價（主要欄位）
+        const occ = (ra > 0) ? (rs/ra*100).toFixed(1) : 0;
+        const arr = (rs > 0) ? idrTo(cur, toNumber(r["Room Revenue"]) / rs) : 0;
+
+        addTd(tr, `${occ}%`, { num:true, calc:true, extra:false });
+        addTd(tr, formatCurrency(arr, cur), { num:true, calc:true, extra:false });
+
+        tbody.appendChild(tr);
+      }
+    } else {
+      // 月/年匯總模式
+      const map = new Map();
+      for (const r of rows) {
+        const t = parseYMD(r.Date);
+        if (!t) continue;
+        const key = `${t.y}-${t.m}`;
+        if (!map.has(key)) {
+          map.set(key, {
+            Year: t.y,
+            Month: t.m,
+            totals: COLS.reduce((o,c)=>(o[c.key]=0,o),{}),
+            extras: EXTRA_COLS.reduce((o,c)=>(o[c.key]=0,o),{})
+          });
+        }
+        const g = map.get(key);
+        for (const c of COLS)       g.totals[c.key] += toNumber(r[c.key]);
+        for (const c of EXTRA_COLS) g.extras[c.key] += toNumber(r[c.key]);
+      }
+
+      const groups = Array.from(map.values())
+        .map(function (g, idx) { return { g: g, idx: idx }; })
+        .sort(function (A, B) {
+          const a = A.g, b = B.g;
+          function gVal(g, key) {
+            if (key === "year") return Number(g.Year) || 0;
+            if (key === "month") return Number(g.Month) || 0;
+            if (key === "ym") return (Number(g.Year) || 0) * 100 + (Number(g.Month) || 0);
+            if (key === "total") {
+              let sum = 0;
+              for (const c of COLS) sum += Number(g.totals[c.key]) || 0;
+              return idrTo(cur, sum);
+            }
+            if (key.startsWith("metric:")) {
+              const k = key.slice("metric:".length);
+              return idrTo(cur, Number(g.totals[k]) || 0);
+            }
+            if (key.startsWith("extra:")) {
+              const k = key.slice("extra:".length);
+              return Number(g.extras[k]) || 0;
+            }
+            if (key === "occ" || key === "arr") {
+              const rs = Number(g.extras['Room Sold']) || 0;
+              const ra = Number(g.extras['RNA Actual']) || 0;
+              const occ = (ra > 0) ? (rs / ra * 100) : 0;
+              const arr = (rs > 0) ? idrTo(cur, (Number(g.totals['Room Revenue']) || 0) / rs) : 0;
+              return key === "occ" ? occ : arr;
+            }
+            return 0;
+          }
+          let d = 0;
+          if (rSortKey === "month" || rSortKey === "year" || rSortKey === "ym" ||
+              rSortKey === "total" || rSortKey === "occ" || rSortKey === "arr" ||
+              rSortKey.startsWith("metric:") || rSortKey.startsWith("extra:")) {
+            d = gVal(a, rSortKey) - gVal(b, rSortKey);
+          }
+          if (!isFinite(d) || d === 0) d = gVal(a, "ym") - gVal(b, "ym");
+          if (d !== 0) return rSortDir === "desc" ? -d : d;
+          return A.idx - B.idx;
+        })
+        .map(function (x) { return x.g; });
+
+      for (const g of groups) {
+        const tr = document.createElement('tr');
+
+        // 年 / 月
+        addTd(tr, g.Year,             { num:false, extra:false });
+        addTd(tr, tableMonthLabel(g.Month),{ num:false, extra:false });
+
+        // 房務 / 其他收入
+        let rowTotal = 0;
+        for (const c of COLS) {
+          const v = g.totals[c.key];
+          rowTotal += v;
+          grand[c.key] += v;
+
+          const isRoom = (c.key === 'Room Revenue');
+          addTd(tr, formatCurrency(idrTo(cur, v), cur), {
+            num: true,
+            extra: !isRoom
+          });
+        }
+
+        grandTotal += rowTotal;
+        addTd(tr, formatCurrency(idrTo(cur, rowTotal), cur), {
+          num: true,
+          calc: true,
+          extra: false    // 總收入：主要欄位
+        });
+
+        // Sold / RNA / RNO
+        const rs = g.extras['Room Sold'];
+        const ra = g.extras['RNA Actual'];
+        const rb = g.extras['RNO Budget'];
+
+        addTd(tr, rs || 0, { num:true, extra:true });
+        addTd(tr, ra || 0, { num:true, extra:true });
+        addTd(tr, rb || 0, { num:true, extra:true });
+
+        grand['Room Sold']  += rs;
+        grand['RNA Actual'] += ra;
+        grand['RNO Budget'] += rb;
+
+        // 住房率% / 平均房價（主要欄位）
+        const occ = (ra > 0) ? (rs/ra*100).toFixed(1) : 0;
+        const arr = (rs > 0) ? idrTo(cur, g.totals['Room Revenue'] / rs) : 0;
+
+        addTd(tr, `${occ}%`, { num:true, calc:true, extra:false });
+        addTd(tr, formatCurrency(arr, cur), { num:true, calc:true, extra:false });
+
+        tbody.appendChild(tr);
+      }
+    }
+
+    // ===== 表尾合計 =====
+    const trf = document.createElement('tr');
+
+    // 「合計」這格要 colspan = 2
+    const tdSum = document.createElement('td');
+    tdSum.colSpan = 2;
+    tdSum.textContent = L.table.sum;
+    trf.appendChild(tdSum);
+
+    // 各收入欄位合計
+    COLS.forEach(c => {
+      const isRoom = (c.key === 'Room Revenue');
+      const td = document.createElement('td');
+      td.textContent = formatCurrency(idrTo(cur, grand[c.key]), cur);
+      td.classList.add('num');
+      if (!isRoom) td.classList.add('mobile-extra');
+      trf.appendChild(td);
+    });
+
+    // 總收入合計（主要欄位）
+    const tdTotal = document.createElement('td');
+    tdTotal.textContent = formatCurrency(idrTo(cur, grandTotal), cur);
+    tdTotal.classList.add('num','calc');
+    trf.appendChild(tdTotal);
+
+    // Sold / RNA / RNO 合計（額外欄位）
+    ['Room Sold','RNA Actual','RNO Budget'].forEach(k => {
+      const td = document.createElement('td');
+      td.textContent = grand[k] || 0;
+      td.classList.add('num','mobile-extra');
+      trf.appendChild(td);
+    });
+
+    // 合計的 住房率% / 平均房價（主要欄位）
+    const totalRS = grand['Room Sold']  || 0;
+    const totalRA = grand['RNA Actual'] || 0;
+    const totalOcc = (totalRA > 0) ? (totalRS/totalRA*100).toFixed(1) : 0;
+    const totalArr = (totalRS > 0) ? idrTo(cur, grand['Room Revenue']/totalRS) : 0;
+
+    addTd(trf, `${totalOcc}%`, { num:true, calc:true, extra:false });
+    addTd(trf, formatCurrency(totalArr, cur), { num:true, calc:true, extra:false });
+
+    tfoot.appendChild(trf);
+
+    // 更新圖表
+    renderCharts(rows);
+    renderComplaints();
+  }
+
+
+  // ===== 初始化 =====
+  async function init(){
+    try {
+      const payload = await fetchJSON(DATA_URL);
+      if (payload && payload.error) {
+        throw new Error(payload.message || "API error");
+      }
+      if (Array.isArray(payload)) {
+        RAW = payload;
+        COMPLAINTS_RAW = [];
+      } else if (payload && Array.isArray(payload.revenue)) {
+        RAW = payload.revenue;
+        COMPLAINTS_RAW = Array.isArray(payload.complaints)
+          ? payload.complaints
+          : [];
+      } else {
+        RAW = [];
+        COMPLAINTS_RAW = [];
+      }
+    } catch(e){
+      console.error("讀取資料失敗:", e);
+      loadingOverlay.innerHTML = "<p>讀取資料失敗，請檢查 API URL</p>";
+      // 失敗的時候也把遮罩拿掉，避免整頁不能點
+      loadingOverlay.style.display = "none";
+      return;
+    }
+
+    if (periodStart) periodStart.value = '';
+    if (periodEnd) periodEnd.value = '';
+    if (periodYearStart) periodYearStart.value = '';
+    if (periodYearEnd) periodYearEnd.value = '';
+    const { minK, maxK } = getDataYmBounds();
+    if (isFinite(minK) && isFinite(maxK) && periodStart && periodEnd) {
+      const lo = keyToYM(minK), hi = keyToYM(maxK);
+      const smin = `${lo.y}-${String(lo.m).padStart(2, '0')}`;
+      const smax = `${hi.y}-${String(hi.m).padStart(2, '0')}`;
+      periodStart.min = smin;
+      periodStart.max = smax;
+      periodEnd.min = smin;
+      periodEnd.max = smax;
+    }
+    const yb = getYearBounds();
+    if (yb && periodYearStart && periodYearEnd) {
+      periodYearStart.min = String(yb.minYear);
+      periodYearStart.max = String(yb.maxYear);
+      periodYearEnd.min = String(yb.minYear);
+      periodYearEnd.max = String(yb.maxYear);
+    }
+
+    updateLangUI();
+    initMetricList();   // ✅ 新增
+    render();
+
+    if (!window._complaintListeners) {
+      const cr = document.getElementById("complaintRoomFilter");
+      const crT = document.getElementById("complaintRoomFilterTable");
+      const cs = document.getElementById("complaintSubjectFilter");
+      const csT = document.getElementById("complaintSubjectFilterTable");
+      const hn = document.getElementById("complaintHideNoComplaint");
+      const cRmMinEl = document.getElementById("complaintRoomMin");
+      const cRmMaxEl = document.getElementById("complaintRoomMax");
+      const cCtMinEl = document.getElementById("complaintCountMin");
+      const cCtMaxEl = document.getElementById("complaintCountMax");
+      if (cr && crT) {
+        cr.addEventListener("change", function () {
+          crT.value = cr.value;
+          renderComplaints();
+        });
+        crT.addEventListener("change", function () {
+          cr.value = crT.value;
+          renderComplaints();
+        });
+      } else {
+        if (cr) cr.addEventListener("change", renderComplaints);
+        if (crT) crT.addEventListener("change", renderComplaints);
+      }
+      if (cs && csT) {
+        cs.addEventListener("change", function () {
+          csT.value = cs.value;
+          renderComplaints();
+        });
+        csT.addEventListener("change", function () {
+          cs.value = csT.value;
+          renderComplaints();
+        });
+      } else {
+        if (cs) cs.addEventListener("change", renderComplaints);
+        if (csT) csT.addEventListener("change", renderComplaints);
+      }
+      if (hn) hn.addEventListener("change", renderComplaints);
+      function bindComplaintRangeInput(el) {
+        if (!el) return;
+        el.addEventListener("input", function () {
+          if (window._complaintFilterTimer) clearTimeout(window._complaintFilterTimer);
+          window._complaintFilterTimer = setTimeout(function () {
+            updateComplaintFilterButtonText();
+            renderComplaints();
+          }, 120);
+        });
+      }
+      bindComplaintRangeInput(cRmMinEl);
+      bindComplaintRangeInput(cRmMaxEl);
+      bindComplaintRangeInput(cCtMinEl);
+      bindComplaintRangeInput(cCtMaxEl);
+      window._complaintListeners = true;
+    }
+
+    // 隱藏 loading 畫面
+    loadingOverlay.style.display="none";
+  }
+
+  // ===== 事件監聽 =====
+
+  // 月份 / 年份切換（桌機箭頭 + 手機滑動共用）
+  function changePeriod(step) {
+    if (!RAW || !RAW.length) return;
+    const { minK, maxK } = getDataYmBounds();
+    if (!isFinite(minK) || !isFinite(maxK)) return;
+
+    const rb = getRangeBounds();
+    if (rb) {
+      let ns = addMonthsKey(rb.startKey, step);
+      let ne = addMonthsKey(rb.endKey, step);
+      if (ns < minK) {
+        const d = minK - ns;
+        ns += d;
+        ne += d;
+      }
+      if (ne > maxK) {
+        const d = ne - maxK;
+        ns -= d;
+        ne -= d;
+      }
+      setMonthInput(periodStart, ns);
+      setMonthInput(periodEnd, ne);
+      updatePeriodButtonText();
+      render();
+      return;
+    }
+
+    const dm = getDailyYM();
+    if (dm) {
+      let k = ymSortKey(dm.y, dm.m);
+      k = addMonthsKey(k, step);
+      if (k < minK) k = minK;
+      if (k > maxK) k = maxK;
+      const { y, m } = keyToYM(k);
+      setSingleYearMonth(y, m);
+      render();
+      return;
+    }
+
+    const yr = getYearRange();
+    const ms = getMonthFilterSet();
+    if (yr && yr.startYear === yr.endYear && ms === null) {
+      const yb = getYearBounds();
+      if (!yb) return;
+      let y = yr.startYear + step;
+      if (y < yb.minYear) y = yb.minYear;
+      if (y > yb.maxYear) y = yb.maxYear;
+      setSingleYearAllMonths(y);
+      render();
+      return;
+    }
+  }
+
+  // 年 / 月 模式切換（所有 .mode-toggle 共用）
+  function toggleYearMonthMode() {
+    if (!RAW || !RAW.length) return;
+    // 有起迄年月時，先清除區間再切換（避免「月/年」跟區間概念衝突）
+    if (usingRangeFilter()) {
+      if (periodStart) periodStart.value = '';
+      if (periodEnd) periodEnd.value = '';
+    }
+
+    const yr = getYearRange();
+    const ms = getMonthFilterSet();
+
+    // 若目前沒指定年份，先給一個預設年份（資料內最大年或今年）
+    const yb = getYearBounds();
+    let baseYear = yb ? yb.maxYear : new Date().getFullYear();
+    if (yb && baseYear < yb.minYear) baseYear = yb.minYear;
+    if (yb && baseYear > yb.maxYear) baseYear = yb.maxYear;
+
+    // 視為「年模式」：單一年份 + 月份未勾（ms === null）
+    const isYearMode = (yr && yr.startYear === yr.endYear && ms === null);
+    // 視為「月模式」：單一年份 + 單一月份（ms.size === 1）
+    const isMonthMode = (yr && yr.startYear === yr.endYear && ms && ms.size === 1);
+
+    if (isYearMode) {
+      const y = yr.startYear;
+      const m = Number(lastMonthSel) || (new Date().getMonth() + 1);
+      setSingleYearMonth(y, m);
+    } else if (isMonthMode) {
+      lastMonthSel = String([...ms][0]);
+      setSingleYearAllMonths(yr.startYear);
+    } else {
+      // 其他狀態（例如年份區間未填、或年份區間跨年、或勾了多個月）
+      // 一律先收斂到「單一年份」的年模式，再切成月模式
+      setSingleYearAllMonths(yr ? yr.startYear : baseYear);
+      const m = Number(lastMonthSel) || (new Date().getMonth() + 1);
+      setSingleYearMonth(yr ? yr.startYear : baseYear, m);
+    }
+    render();
+  }
+
+  if (periodBtn && periodDropdown && !periodBtn._pBound) {
+    periodBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = periodDropdown.classList.contains('show');
+      if (isOpen) {
+        periodDropdown.classList.remove('show');
+        return;
+      }
+      closeOtherDropdowns(periodDropdown);
+      periodDropdown.classList.add('show');
+    });
+    periodBtn._pBound = true;
+  }
+  if (!window._periodDocBound && periodDropdown) {
+    document.addEventListener('click', (e) => {
+      if (!periodDropdown.contains(e.target)) periodDropdown.classList.remove('show');
+    });
+    window._periodDocBound = true;
+  }
+
+  // 客訴篩選下拉（房號/次數區間）
+  const complaintFilterBtn = document.getElementById('complaintFilterBtn');
+  const complaintFilterDropdown = document.getElementById('complaintFilterDropdown');
+  const complaintFilterClear = document.getElementById('complaintFilterClear');
+  if (complaintFilterBtn && complaintFilterDropdown && !complaintFilterBtn._cBound) {
+    complaintFilterBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = complaintFilterDropdown.classList.contains('show');
+      if (isOpen) {
+        complaintFilterDropdown.classList.remove('show');
+        return;
+      }
+      closeOtherDropdowns(complaintFilterDropdown);
+      complaintFilterDropdown.classList.add('show');
+    });
+    complaintFilterBtn._cBound = true;
+  }
+  if (!window._complaintFilterDocBound && complaintFilterDropdown) {
+    document.addEventListener('click', (e) => {
+      if (!complaintFilterDropdown.contains(e.target)) complaintFilterDropdown.classList.remove('show');
+    });
+    window._complaintFilterDocBound = true;
+  }
+  if (complaintFilterClear && !complaintFilterClear._cClrBound) {
+    complaintFilterClear.addEventListener('click', () => {
+      const a = document.getElementById('complaintRoomMin');
+      const b = document.getElementById('complaintRoomMax');
+      const c = document.getElementById('complaintCountMin');
+      const d = document.getElementById('complaintCountMax');
+      if (a) a.value = '';
+      if (b) b.value = '';
+      if (c) c.value = '';
+      if (d) d.value = '';
+      updateComplaintFilterButtonText();
+      renderComplaints();
+    });
+    complaintFilterClear._cClrBound = true;
+  }
+
+  // 貨幣下拉（取代原生 select，避免手機爆框）
+  if (currencyBtn && currencyDropdown && !currencyBtn._curBound) {
+    currencyBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = currencyDropdown.classList.contains('show');
+      if (isOpen) {
+        currencyDropdown.classList.remove('show');
+        return;
+      }
+      closeOtherDropdowns(currencyDropdown);
+      currencyDropdown.classList.add('show');
+    });
+    currencyBtn._curBound = true;
+  }
+  if (!window._currencyDocBound && currencyDropdown) {
+    document.addEventListener('click', (e) => {
+      if (!currencyDropdown.contains(e.target)) currencyDropdown.classList.remove('show');
+    });
+    window._currencyDocBound = true;
+  }
+  rebuildCurrencyDropdown();
+
+  // 語言下拉（取代原生 select，避免手機爆框）
+  if (langBtn && langDropdown && !langBtn._langBound) {
+    langBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = langDropdown.classList.contains('show');
+      if (isOpen) {
+        langDropdown.classList.remove('show');
+        return;
+      }
+      closeOtherDropdowns(langDropdown);
+      langDropdown.classList.add('show');
+    });
+    langBtn._langBound = true;
+  }
+  if (!window._langDocBound && langDropdown) {
+    document.addEventListener('click', (e) => {
+      if (!langDropdown.contains(e.target)) langDropdown.classList.remove('show');
+    });
+    window._langDocBound = true;
+  }
+  rebuildLangDropdown();
+  if (periodStart) periodStart.addEventListener('change', () => { render(); updatePeriodButtonText(); });
+  if (periodEnd) periodEnd.addEventListener('change', () => { render(); updatePeriodButtonText(); });
+  const periodRangeClear = document.getElementById('periodRangeClear');
+  if (periodRangeClear) {
+    periodRangeClear.addEventListener('click', () => {
+      if (periodStart) periodStart.value = '';
+      if (periodEnd) periodEnd.value = '';
+      if (periodYearStart) periodYearStart.value = '';
+      if (periodYearEnd) periodYearEnd.value = '';
+      if (monthCheckList) {
+        monthCheckList.querySelectorAll('input').forEach(i => { i.checked = false; });
+      }
+      render();
+      updatePeriodButtonText();
+    });
+  }
+  if (periodYearStart) periodYearStart.addEventListener('input', () => { render(); updatePeriodButtonText(); });
+  if (periodYearEnd) periodYearEnd.addEventListener('input', () => { render(); updatePeriodButtonText(); });
+  const periodYearClear = document.getElementById('periodYearClear');
+  if (periodYearClear) {
+    periodYearClear.addEventListener('click', () => {
+      if (periodYearStart) periodYearStart.value = '';
+      if (periodYearEnd) periodYearEnd.value = '';
+      render();
+      updatePeriodButtonText();
+    });
+  }
+
+  const periodMonthClear = document.getElementById('periodMonthClear');
+  if (periodMonthClear) {
+    periodMonthClear.addEventListener('click', () => {
+      if (monthCheckList) {
+        monthCheckList.querySelectorAll('input').forEach(i => { i.checked = false; });
+      }
+      render();
+      updatePeriodButtonText();
+    });
+  }
+
+  currencySel.addEventListener('change', function () {
+    syncCurrencyUIFromSelect();
+    render();
+  });
+
+  // 語系切換
+  langSel.addEventListener('change', e=>{
+    currentLang = e.target.value;
+    updateLangUI();
+    syncLangUIFromSelect();
+    render();
+  });
+
+  // 手機版：在折線圖卡片上左右滑動切換月份 / 年份
+  if (trendCard) {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+
+    trendCard.addEventListener('touchstart', (e) => {
+      const t = e.touches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+      touchStartTime = Date.now();
+    }, { passive: true });
+
+    trendCard.addEventListener('touchend', (e) => {
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
+      const dt = Date.now() - touchStartTime;
+
+      // 基本條件：時間不要太久、位移夠大且主要是左右滑
+      if (dt > 600) return;
+      if (Math.abs(dx) < 40) return;
+      if (Math.abs(dx) < Math.abs(dy)) return;
+
+      if (dx < 0) {
+        // 往左滑 → 下一個月 / 下一年
+        changePeriod(1);
+      } else {
+        // 往右滑 → 上一個月 / 上一年
+        changePeriod(-1);
+      }
+    }, { passive: true });
+  }
+
+  // 每 30 分鐘自動更新匯率
+  setInterval(updateRates, 30*60*1000);
+
+  function setupMainTabNav() {
+    const btnR = document.getElementById("mainTabRevenue");
+    const btnC = document.getElementById("mainTabComplaints");
+    const panR = document.getElementById("mainPanelRevenue");
+    const panC = document.getElementById("mainPanelComplaints");
+    if (!btnR || !btnC || !panR || !panC) return;
+
+    function bumpCharts() {
+      requestAnimationFrame(function () {
+        try {
+          if (typeof trendChart !== "undefined" && trendChart) trendChart.resize();
+          if (typeof pieChart !== "undefined" && pieChart) pieChart.resize();
+          if (typeof complaintBarChart !== "undefined" && complaintBarChart) complaintBarChart.resize();
+          if (typeof complaintTrendChart !== "undefined" && complaintTrendChart) complaintTrendChart.resize();
+        } catch (e0) {}
+      });
+      setTimeout(function () {
+        try {
+          if (typeof trendChart !== "undefined" && trendChart) trendChart.resize();
+          if (typeof pieChart !== "undefined" && pieChart) pieChart.resize();
+          if (typeof complaintBarChart !== "undefined" && complaintBarChart) complaintBarChart.resize();
+          if (typeof complaintTrendChart !== "undefined" && complaintTrendChart) complaintTrendChart.resize();
+        } catch (e1) {}
+      }, 160);
+    }
+
+    function go(which) {
+      var rev = which === "revenue";
+      panR.hidden = !rev;
+      panC.hidden = rev;
+      btnR.setAttribute("aria-selected", rev ? "true" : "false");
+      btnC.setAttribute("aria-selected", rev ? "false" : "true");
+      btnR.classList.toggle("main-tab--active", rev);
+      btnC.classList.toggle("main-tab--active", !rev);
+      btnR.tabIndex = rev ? 0 : -1;
+      btnC.tabIndex = rev ? -1 : 0;
+      window.scrollTo(0, 0);
+      bumpCharts();
+    }
+
+    btnR.addEventListener("click", function () { go("revenue"); });
+    btnC.addEventListener("click", function () { go("complaints"); });
+  }
+
+  // 頁面載入完成 → 初始化
+  document.addEventListener("DOMContentLoaded", function () {
+    setupMainTabNav();
+    setupPieCollapseToggle();
+    init();
+  });
+
+  // 手機版：展開/收合欄位按鈕
+  const toggleColsBtn = document.getElementById('toggleColsBtn');
+  if (toggleColsBtn) {
+    toggleColsBtn.addEventListener('click', () => {
+      const on = document.body.classList.toggle('show-more-cols');
+      toggleColsBtn.textContent = on ? 'Close ▲' : 'More ▼';
+    });
+  }
+
+  // 所有上一月 / 下一月按鈕（桌機 + 手機共用）
+  document.querySelectorAll('.nav-prev').forEach(btn => {
+    btn.addEventListener('click', () => changePeriod(-1));
+  });
+  document.querySelectorAll('.nav-next').forEach(btn => {
+    btn.addEventListener('click', () => changePeriod(1));
+  });
+
+  // 所有年/月切換按鈕（桌機 + 手機共用）
+  document.querySelectorAll('.mode-toggle').forEach(btn => {
+    btn.addEventListener('click', toggleYearMonthMode);
+  });
+
+  // 視窗尺寸改變 → 重新渲染（150ms 防抖）
+  let _rzTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(_rzTimer);
+    _rzTimer = setTimeout(() => render(), 150);
+  });
+
+
+    // === 手機版：三條槓 + 側邊欄邏輯 ===
+  document.addEventListener('DOMContentLoaded', () => {
+    const menuToggle  = document.querySelector('.menu-toggle');
+    const sideOverlay = document.getElementById('sideOverlay');
+    const filters     = document.querySelector('.filters');
+
+    // 點三條槓 → 開 / 關 側邊選單
+    if (menuToggle) {
+      menuToggle.addEventListener('click', (e) => {
+        e.stopPropagation();                   // 不要往上冒泡
+        document.body.classList.toggle('menu-open');
+      });
+    }
+
+// 點黑色遮罩 → 關閉側邊選單
+    if (sideOverlay) {
+      sideOverlay.addEventListener('click', () => {
+        document.body.classList.remove('menu-open');
+      });
+    }
+
+    // 點側邊欄內容本身，不要關閉（讓 select / dropdown 可以正常操作）
+    if (filters) {
+      filters.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+  });
+</script>
+
+
+  <!-- 備註說明區 -->
+  <div class="note" style="margin:20px 0 40px 0; font-size:13px; color:#555; padding-left:16px;">
+    <b>備註：</b><br/>
+    1. 以下欄位為系統計算，並非直接帶入試算表資料：<br/>
+    &nbsp;&nbsp;&nbsp;• 總收入 (Total Revenue) = 房務收入Room + 餐飲Food + 飲料Beverages + 其他Other + 商店Stores + 宴會Banquet + 洗衣Laundry<br/>
+    &nbsp;&nbsp;&nbsp;• 住房率% (Occ%) = (已售Sold ÷ 可售RNA) × 100%<br/>
+    &nbsp;&nbsp;&nbsp;• 平均房價 (Avg Rate) = 房務收入Room Revenue ÷ 已售Sold<br/>
+    <br/>
+    2. 匯率更新方式與頻率：<br/>
+    &nbsp;&nbsp;&nbsp;• 匯率來源：open.er-api.com 即時 API<br/>
+    &nbsp;&nbsp;&nbsp;• 使用者可手動點擊「Update」按鈕立即更新<br/>
+    &nbsp;&nbsp;&nbsp;• 系統會自動每 30 分鐘更新一次<br/>
+    &nbsp;&nbsp;&nbsp;• 若 API 錯誤或網路異常，系統會保留上次成功的匯率<br/>
+    <br/>
+  </div>
+
+</body>
+</html>

@@ -2,14 +2,11 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>HOTEL_PDv47</title>
 
   <!-- Chart.js 3.9；長條數字改自寫 plugin，不再用 chartjs-plugin-datalabels（file://／resize 易觸發 _listened／_labels 錯誤） -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-  <!-- 雙指捏合縮放折線圖資料（需 Hammer.js） -->
-  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
 
   <style>
     /* 全域字型與頁面設定 */
@@ -302,6 +299,8 @@ td.num, th.num {
   border: 1px solid rgba(148,163,184,0.45);
   box-shadow: 0 20px 45px rgba(15,23,42,0.9);
   box-sizing: border-box; /* 避免手機寬度 + padding 溢出被切 */
+  min-width: 0;            /* flex 子項可縮小，避免橫屏右緣被裁 */
+  max-width: 100%;
 }
 
 .chart-left { 
@@ -437,7 +436,6 @@ td.num, th.num {
     .chart-right canvas {
       width: 100% !important;
       /* 刪掉 height: auto !important; */
-      touch-action: none; /* 允許雙指捏合縮放，避免瀏覽器手勢搶走 */
     }
 
     /* 圖表標題文字 */
@@ -1101,11 +1099,185 @@ td.num, th.num {
   display: inline-block;
   flex: 0 0 auto;
 }
-@media (max-width: 900px) and (orientation: landscape) {
+/* 手機橫屏：寬度常 >768（如 915/1206），勿套桌機篩選列；強制手機殼（☰＋側欄） */
+@media (orientation: landscape) and (max-height: 600px),
+       (max-width: 900px) and (orientation: landscape) {
+  html, body {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+  header {
+    padding: 6px 0;
+  }
+  .wrap {
+    padding: 8px max(10px, env(safe-area-inset-right, 0px)) 8px max(10px, env(safe-area-inset-left, 0px));
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  header .wrap {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+  main.wrap {
+    padding-top: 4px;
+  }
+  .top-bar {
+    margin-bottom: 6px;
+  }
+  .main-tabs {
+    padding-left: 8px;
+    border-left-color: rgba(148,163,184,0.22);
+  }
+  .main-tab {
+    padding: 4px 10px;
+    font-size: 13px;
+  }
+  h1 {
+    font-size: 18px;
+  }
+  .menu-toggle {
+    display: inline-flex !important;
+  }
+  .close-filter-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 16px;
+    right: 14px;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    border: 1px solid rgba(148,163,184,0.5);
+    background: rgba(2,6,23,0.9);
+    color: #e5e7eb;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 1300;
+  }
+  .mobile-only {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(148,163,184,0.7);
+    background: radial-gradient(circle at top, #020617 0, #020617 60%, #020617 100%);
+    color: #e5e7eb;
+    font-size: 12px;
+    box-shadow: 0 8px 20px rgba(15,23,42,0.9);
+  }
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* 篩選：改左側滑出，不要桌機橫排卡片 */
+  .filters {
+    position: fixed !important;
+    top: 0 !important;
+    left: -340px !important;
+    width: min(320px, 86vw) !important;
+    height: 100vh !important;
+    background: radial-gradient(circle at top, #020617 0, #020617 55%, #020617 100%) !important;
+    box-shadow: 2px 0 24px rgba(15,23,42,0.95);
+    padding: 70px 12px 16px 12px !important;
+    box-sizing: border-box !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    overflow-y: auto !important;
+    z-index: 1001 !important;
+  }
+  body.menu-open .filters {
+    left: 0 !important;
+    transition: left 0.2s ease-out;
+  }
+  body.menu-open #sideOverlay {
+    display: block !important;
+  }
+  .filters .card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .filters label {
+    font-size: 11px !important;
+    margin-bottom: 2px !important;
+  }
+  .filters select,
+  .filters .dropdown button {
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    padding: 4px 10px !important;
+    font-size: 12px !important;
+  }
+  .dropdown-content.period-panel,
+  .dropdown-content.complaint-filter-panel {
+    min-width: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 圖表：手機橫向堆疊；收合圓餅後趨勢滿寬 */
+  .charts {
+    flex-direction: column !important;
+    gap: 8px;
+    margin: 6px 0;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .chart-left,
+  .chart-right {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding-left: 10px;
+    padding-right: 10px;
+    box-sizing: border-box;
+  }
+  .chart-right {
+    order: 1;
+    flex: none;
+  }
+  .chart-left {
+    order: 2;
+    flex: none;
+    position: relative;
+  }
+  .charts.pie-collapsed .chart-right {
+    order: 1 !important;
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .chart-right canvas {
+    width: 100% !important;
+  }
+  .chart-right {
+    touch-action: pan-y;
+  }
+  .chart-left h2,
+  .chart-right h2 {
+    font-size: 13px !important;
+    margin: 4px 0 6px !important;
+  }
   .chart-right .chart-header {
     align-items: center;
     gap: 6px;
     margin-bottom: 4px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .chart-right .chart-nav {
+    flex: 0 0 auto;
   }
   .chart-right .chart-titles {
     display: flex;
@@ -1206,6 +1378,46 @@ td.num, th.num {
 .nav-btn:active {
   transform: translateY(0);
   box-shadow: none;
+}
+
+/* 橫屏：年月旁全螢幕按鈕 */
+.chart-fs-btn {
+  display: none;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+@media (orientation: landscape) and (max-height: 600px),
+       (max-width: 900px) and (orientation: landscape) {
+  .chart-right .chart-fs-btn {
+    display: inline-flex;
+  }
+}
+/* 折線圖全螢幕（CSS 模擬，相容 iOS；不用 100vw 避免橫向溢出裁右緣） */
+.chart-right.trend-fs {
+  position: fixed !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 2200 !important;
+  width: auto !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  padding-top: max(8px, env(safe-area-inset-top, 0px)) !important;
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
+  padding-left: max(10px, env(safe-area-inset-left, 0px)) !important;
+  padding-right: max(10px, env(safe-area-inset-right, 0px)) !important;
+  order: 0 !important;
+  box-sizing: border-box !important;
+}
+body.trend-fs-open {
+  overflow: hidden !important;
+}
+body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
+  display: inline-flex !important;
 }
 
 /* 桌機專用箭頭（手機隱藏） */
@@ -1777,6 +1989,7 @@ td.num, th.num {
             <div id="trendLegendHtml" class="trend-legend-html" hidden></div>
           </div>
           <div class="chart-nav">
+            <button type="button" class="nav-btn chart-fs-btn" id="trendFullscreenBtn" aria-label="全螢幕" title="全螢幕">⛶</button>
             <button type="button" class="mode-toggle" aria-label="切換年/月模式"></button>
             <button type="button" class="nav-btn nav-prev" aria-label="Previous period">‹</button>
             <button type="button" class="nav-btn nav-next" aria-label="Next period">›</button>
@@ -2022,7 +2235,9 @@ td.num, th.num {
         pie: "收入來源", 
         line: "營收/指標趨勢",
         collapsePie: "收合圓餅圖",
-        expandPie: "展開圓餅圖"
+        expandPie: "展開圓餅圖",
+        fullscreen: "全螢幕",
+        exitFullscreen: "離開全螢幕"
       },
       modeLabels: {
         year: "年",
@@ -2124,7 +2339,9 @@ td.num, th.num {
         pie: "Revenue Sources", 
         line: "Revenue/Indicators Trend",
         collapsePie: "Collapse pie chart",
-        expandPie: "Expand pie chart"
+        expandPie: "Expand pie chart",
+        fullscreen: "Fullscreen",
+        exitFullscreen: "Exit fullscreen"
       },
       modeLabels: {
         year: "Year",
@@ -2224,7 +2441,9 @@ td.num, th.num {
         pie: "Sumber Pendapatan", 
         line: "Tren Pendapatan/Indikator",
         collapsePie: "Sembunyikan pie",
-        expandPie: "Tampilkan pie"
+        expandPie: "Tampilkan pie",
+        fullscreen: "Layar penuh",
+        exitFullscreen: "Keluar layar penuh"
       },
       modeLabels: {
         year: "Tahun",
@@ -2341,6 +2560,7 @@ function updateLangUI(){
     document.getElementById("titleLine").textContent = L.chartTitles.line;
     document.getElementById("noteRate").textContent = getNoteText(currentLang);
     updatePieCollapseButtonUI();
+    updateTrendFullscreenButtonUI();
 
     const Ttabs = L.tabs;
     if (Ttabs) {
@@ -2747,7 +2967,7 @@ function updateLangUI(){
     try {
       return !!(
         window.matchMedia &&
-        window.matchMedia("(max-width: 900px) and (orientation: landscape)").matches
+        window.matchMedia("(orientation: landscape) and (max-height: 600px), (max-width: 900px) and (orientation: landscape)").matches
       );
     } catch (e) {
       return false;
@@ -2839,6 +3059,59 @@ function updateLangUI(){
     setPieCollapsed(isMobileLandscapeCharts(), { skipResize: false });
   }
 
+  function updateTrendFullscreenButtonUI() {
+    const btn = document.getElementById("trendFullscreenBtn");
+    const card = document.querySelector(".chart-right");
+    if (!btn || !card) return;
+    const on = card.classList.contains("trend-fs");
+    const L = (LANGS[currentLang] && LANGS[currentLang].chartTitles) || {};
+    const label = on
+      ? (L.exitFullscreen || "Exit fullscreen")
+      : (L.fullscreen || "Fullscreen");
+    btn.textContent = on ? "✕" : "⛶";
+    btn.setAttribute("aria-label", label);
+    btn.setAttribute("title", label);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+  }
+
+  function setTrendFullscreen(on) {
+    const card = document.querySelector(".chart-right");
+    if (!card) return;
+    const want = !!on;
+    card.classList.toggle("trend-fs", want);
+    document.body.classList.toggle("trend-fs-open", want);
+    updateTrendFullscreenButtonUI();
+    bumpRevenueChartsSoon();
+  }
+
+  function setupTrendFullscreenToggle() {
+    const btn = document.getElementById("trendFullscreenBtn");
+    if (!btn || btn._fsBound) return;
+    btn.addEventListener("click", function (e) {
+      if (e) e.stopPropagation();
+      const card = document.querySelector(".chart-right");
+      if (!card) return;
+      setTrendFullscreen(!card.classList.contains("trend-fs"));
+    });
+    btn._fsBound = true;
+
+    // 轉回直向時自動離開全螢幕
+    if (!window._trendFsOrientBound && typeof window.matchMedia === "function") {
+      const mq = window.matchMedia("(orientation: landscape) and (max-height: 600px), (max-width: 900px) and (orientation: landscape)");
+      const onChange = function () {
+        if (!mq.matches) setTrendFullscreen(false);
+        updateTrendFullscreenButtonUI();
+      };
+      if (typeof mq.addEventListener === "function") mq.addEventListener("change", onChange);
+      else if (typeof mq.addListener === "function") mq.addListener(onChange);
+      window.addEventListener("orientationchange", function () {
+        setTimeout(onChange, 80);
+      });
+      window._trendFsOrientBound = true;
+    }
+    updateTrendFullscreenButtonUI();
+  }
+
   function setupPieCollapseToggle() {
     const btn = document.getElementById("pieCollapseBtn");
     const topBtn = document.getElementById("mainPieToggleBtn");
@@ -2868,7 +3141,7 @@ function updateLangUI(){
     applyPieCollapseDefaultByViewport(true);
 
     if (!window._pieCollapseOrientBound && typeof window.matchMedia === "function") {
-      const mq = window.matchMedia("(max-width: 900px) and (orientation: landscape)");
+      const mq = window.matchMedia("(orientation: landscape) and (max-height: 600px), (max-width: 900px) and (orientation: landscape)");
       const onChange = function () {
         window._pieCollapseUserTouched = false;
         applyPieCollapseDefaultByViewport(true);
@@ -3120,10 +3393,10 @@ function updateLangUI(){
     if (trendChart) trendChart.destroy();
 
     // 先判斷是否為手機寬度（更準）
-    const isMobile = window.matchMedia('(max-width: 768px)').matches;
     const isMobileLandscape =
       typeof window.matchMedia === "function" &&
-      window.matchMedia("(max-width: 900px) and (orientation: landscape)").matches;
+      window.matchMedia("(orientation: landscape) and (max-height: 600px), (max-width: 900px) and (orientation: landscape)").matches;
+    const isMobile = window.matchMedia('(max-width: 768px)').matches || isMobileLandscape;
 
     /*
      * 客訴長條圖數字標籤使用自寫 afterDatasetsDraw plugin，不依賴 chartjs-plugin-datalabels。
@@ -3201,28 +3474,6 @@ function updateLangUI(){
             color: "#94a3b8",
             font: { size: isMobile ? 9 : 10, weight: "400" },
             padding: { top: 18, bottom: 2 }
-          },
-          zoom: {
-            limits: {
-              x: { min: "original", max: "original" },
-              yLeft: { min: "original", max: "original" },
-              yRight: { min: "original", max: "original" },
-              yPercent: { min: 0, max: 100 }
-            },
-            pan: {
-              /* 單指平移關閉，避免跟左右滑切期間衝突；雙指捏合縮放即可 */
-              enabled: false
-            },
-            zoom: {
-              wheel: {
-                enabled: true,
-                speed: 0.1
-              },
-              pinch: {
-                enabled: true
-              },
-              mode: "xy"
-            }
           }
         },
         scales:{
@@ -5461,13 +5712,12 @@ function updateLangUI(){
     render();
   });
 
-  // 手機版：折線圖左右滑切期間；單指上下拖調卡片高度；雙指捏合縮放資料
+  // 手機版：折線圖左右滑切期間；單指上下拖調卡片高度
   if (trendCard) {
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartTime = 0;
     let touchWasMulti = false;
-    let lastTapAt = 0;
     let resizeMode = false;      // 已判定為上下拖調高度
     let swipeLocked = false;     // 已判定為左右滑
     let startCardH = 0;
@@ -5518,14 +5768,12 @@ function updateLangUI(){
     }, { passive: false });
 
     trendCard.addEventListener('touchend', (e) => {
-      // 雙指捏合中：不觸發切期間
       if (touchWasMulti || (e.touches && e.touches.length > 0)) {
         touchWasMulti = false;
         resizeMode = false;
         swipeLocked = false;
         return;
       }
-      // 剛做完調高度：不切期間
       if (resizeMode) {
         resizeMode = false;
         swipeLocked = false;
@@ -5536,18 +5784,6 @@ function updateLangUI(){
       const dx = t.clientX - touchStartX;
       const dy = t.clientY - touchStartY;
       const dt = Date.now() - touchStartTime;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      // 雙擊空白處：重置縮放
-      const now = Date.now();
-      if (dist < 18 && dt < 350 && now - lastTapAt < 320) {
-        lastTapAt = 0;
-        try {
-          if (trendChart && typeof trendChart.resetZoom === "function") trendChart.resetZoom();
-        } catch (err) {}
-        return;
-      }
-      lastTapAt = now;
 
       // 基本條件：時間不要太久、位移夠大且主要是左右滑
       if (dt > 600) return;
@@ -5555,10 +5791,8 @@ function updateLangUI(){
       if (Math.abs(dx) < Math.abs(dy)) return;
 
       if (dx < 0) {
-        // 往左滑 → 下一個月 / 下一年
         changePeriod(1);
       } else {
-        // 往右滑 → 上一個月 / 上一年
         changePeriod(-1);
       }
     }, { passive: true });
@@ -5615,6 +5849,7 @@ function updateLangUI(){
   document.addEventListener("DOMContentLoaded", function () {
     setupMainTabNav();
     setupPieCollapseToggle();
+    setupTrendFullscreenToggle();
     init();
   });
 

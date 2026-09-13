@@ -1286,7 +1286,10 @@ td.num, th.num {
     font-size: 13px;
   }
   h1 {
-    font-size: 18px;
+    font-size: 15px !important;
+    text-align: center;
+    flex: 1 1 auto;
+    min-width: 0;
   }
   .menu-toggle {
     display: inline-flex !important;
@@ -1487,18 +1490,24 @@ td.num, th.num {
     overflow: hidden;
   }
   .complaint-line-titles {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
+    justify-content: center;
     column-gap: 10px;
     row-gap: 2px;
     min-width: 0;
-    text-align: left;
+    text-align: center;
+    padding: 0 32px; /* 避開左側收合箭頭 */
+    box-sizing: border-box;
+    width: 100%;
   }
   .complaint-line-titles h3 {
     margin: 0 !important;
     white-space: nowrap;
-    text-align: left !important;
+    text-align: center !important;
+    flex: 0 0 auto;
   }
   .complaint-line-titles .chart-subtitle {
     margin: 0 !important;
@@ -1507,7 +1516,9 @@ td.num, th.num {
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
-    text-align: left !important;
+    max-width: 55%;
+    text-align: center !important;
+    flex: 0 1 auto;
   }
 }
 
@@ -1910,17 +1921,142 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
   box-shadow: 0 14px 36px rgba(15,23,42,0.85);
   box-sizing: border-box;
 }
-/* 與上方 .chart-right h2「營收/指標趨勢」同級視覺：桌機 16px、手機見下方 media */
+/* 與上方 .chart-right h2「營收/指標趨勢」同級視覺：標題縮小置中 */
 .complaints-charts .compl-chart-card h3 {
-  font-size: 16px;
-  margin: 6px 0;
+  font-size: 12px;
+  margin: 4px 28px 6px;
   text-align: center;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #e2e8f0;
+  font-weight: 600;
+}
+.complaint-line-titles {
+  text-align: center;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  column-gap: 10px;
+  padding: 0 32px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+.complaint-line-titles h3 {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 .complaint-line-titles .chart-subtitle {
-  margin-bottom: 6px;
+  margin-bottom: 0 !important;
+  text-align: center !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 55%;
+  flex: 0 1 auto;
+}
+.complaints-charts .compl-chart-card.complaint-line-card h3 {
+  text-align: center !important;
+}
+/* 客訴左右圖收合按鈕 */
+.complaints-charts .compl-chart-card {
+  position: relative;
+}
+.complaint-collapse-btn {
+  position: absolute;
+  top: 8px;
+  z-index: 5;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.55);
+  background: rgba(2,6,23,0.85);
+  color: #e5e7eb;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  box-shadow: 0 6px 14px rgba(15,23,42,0.55);
+}
+.complaint-collapse-btn:hover {
+  background: rgba(30,41,59,0.95);
+  border-color: rgba(56,189,248,0.55);
+}
+/* 左圖：箭頭在右；右圖：箭頭在左 */
+.complaint-collapse-bar {
+  right: 8px;
+}
+.complaint-collapse-line {
+  left: 8px;
+}
+/* 左圖往左收 / 右圖往右收：留窄條，高度跟另一側一樣，箭頭在上方 */
+.complaints-charts.bar-collapsed,
+.complaints-charts.line-collapsed {
+  align-items: stretch !important;
+  flex-wrap: nowrap !important;
+  flex-direction: row !important; /* 手機直向也改並排，才會是「一條」不是橫膠囊 */
+  gap: 10px;
+}
+.complaints-charts.bar-collapsed .complaint-bar-card,
+.complaints-charts.line-collapsed .complaint-line-card {
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  padding: 8px 4px !important;
+  overflow: hidden;
+  align-self: stretch !important;
+  box-sizing: border-box;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+}
+.complaints-charts.bar-collapsed .complaint-bar-card > h3,
+.complaints-charts.bar-collapsed .complaint-bar-viewport {
+  display: none !important;
+}
+.complaints-charts.bar-collapsed .complaint-collapse-bar {
+  position: absolute;
+  right: 4px;
+  left: auto;
+  top: 8px;
+  transform: none;
+}
+.complaints-charts.bar-collapsed .complaint-line-card {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  order: 0 !important;
+}
+.complaints-charts.line-collapsed .complaint-line-titles,
+.complaints-charts.line-collapsed .complaint-trend-host {
+  display: none !important;
+}
+.complaints-charts.line-collapsed .complaint-collapse-line {
+  position: absolute;
+  left: 4px;
+  right: auto;
+  top: 8px;
+  transform: none;
+}
+.complaints-charts.line-collapsed .complaint-bar-card {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+}
+.complaints-charts.bar-collapsed.line-collapsed .complaint-bar-card,
+.complaints-charts.bar-collapsed.line-collapsed .complaint-line-card {
+  flex: 0 0 36px !important;
+  align-self: stretch !important;
+  min-height: 180px;
 }
 /*
  * 客訴 canvas 不要用 width:100% !important：會蓋掉 Chart.js 的 inline 尺寸。
@@ -2149,12 +2285,17 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
   .complaints-charts .compl-chart-card.complaint-bar-card {
     padding: 8px 10px;
   }
-  /* 比照 .chart-left h2 / .chart-right h2 手機 13px */
+  /* 比照手機圖表標題：更小、置中 */
   .complaints-charts .compl-chart-card h3 {
-    font-size: 13px !important;
-    margin: 4px 0 6px !important;
-    letter-spacing: 0.06em;
+    font-size: 11px !important;
+    margin: 4px 26px 4px !important;
+    letter-spacing: 0.04em;
     text-align: center !important;
+  }
+  .complaint-line-titles .chart-subtitle {
+    text-align: center !important;
+    font-size: 10px !important;
+    margin-bottom: 0 !important;
   }
 }
 
@@ -2396,6 +2537,7 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
       <p class="complaints-meta" id="complaintsMeta"></p>
       <div class="complaints-charts" id="complaintsChartsRow">
         <div class="compl-chart-card complaint-bar-card" id="complaintBarCard">
+          <button type="button" class="complaint-collapse-btn complaint-collapse-bar" id="complaintBarCollapseBtn" aria-expanded="true" title="收合">‹</button>
           <h3 id="titleComplaintByRoom"></h3>
           <div class="complaint-bar-viewport" id="complaintBarViewport">
             <div class="complaint-bar-host" id="complaintBarHost">
@@ -2403,7 +2545,8 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
             </div>
           </div>
         </div>
-        <div class="compl-chart-card complaint-line-card">
+        <div class="compl-chart-card complaint-line-card" id="complaintLineCard">
+          <button type="button" class="complaint-collapse-btn complaint-collapse-line" id="complaintLineCollapseBtn" aria-expanded="true" title="收合">›</button>
           <div class="complaint-line-titles">
             <h3 id="titleComplaintBySubject"></h3>
             <div id="subTitleComplaintTrend" class="chart-subtitle"></div>
@@ -2632,7 +2775,11 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
         noSlice: "（無實際客訴可統計）",
         sectionTitle: "客訴與維修紀錄",
         barOtherSubjects: "其他主題",
-        barNoRoomLabel: "無房號"
+        barNoRoomLabel: "無房號",
+        collapseBar: "收合左側圖",
+        expandBar: "展開左側圖",
+        collapseLine: "收合右側圖",
+        expandLine: "展開右側圖"
       },
       weekdays: ['週日','週一','週二','週三','週四','週五','週六'],
       months: m => `${m}月`,
@@ -2739,7 +2886,11 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
         noSlice: "(No real complaints in period)",
         sectionTitle: "Guest complaints & maintenance",
         barOtherSubjects: "Other subjects",
-        barNoRoomLabel: "No room #"
+        barNoRoomLabel: "No room #",
+        collapseBar: "Collapse left chart",
+        expandBar: "Expand left chart",
+        collapseLine: "Collapse right chart",
+        expandLine: "Expand right chart"
       },
       weekdays: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
       months: m => ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m-1],
@@ -2844,7 +2995,11 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
         noSlice: "(Tidak ada komplain nyata)",
         sectionTitle: "Komplain & perawatan",
         barOtherSubjects: "Subjek lain",
-        barNoRoomLabel: "Tanpa nomor kamar"
+        barNoRoomLabel: "Tanpa nomor kamar",
+        collapseBar: "Ciutkan grafik kiri",
+        expandBar: "Bentangkan grafik kiri",
+        collapseLine: "Ciutkan grafik kanan",
+        expandLine: "Bentangkan grafik kanan"
       },
       weekdays: ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'],
       months: m => ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"][m-1],
@@ -2948,6 +3103,7 @@ function updateLangUI(){
       if (tr) tr.textContent = C.byRoom || "";
       const ts = document.getElementById("titleComplaintBySubject");
       if (ts) ts.textContent = C.byMonthTrend || "";
+      try { updateComplaintChartsCollapseUI(); } catch (eCu) {}
     }
     updateComplaintTrendPeriodSubtitle();
 
@@ -3466,6 +3622,56 @@ function updateLangUI(){
     } catch (e) {}
   }
 
+  /** 收合窄條高度對齊展開側圖卡 */
+  function syncComplaintCollapseStripHeight() {
+    const row = document.getElementById("complaintsChartsRow");
+    const barCard = document.getElementById("complaintBarCard");
+    const lineCard = document.getElementById("complaintLineCard") || document.querySelector(".complaint-line-card");
+    if (!row || !barCard || !lineCard) return false;
+    const barOn = row.classList.contains("bar-collapsed");
+    const lineOn = row.classList.contains("line-collapsed");
+
+    if (!barOn) {
+      barCard.style.height = "";
+      barCard.style.minHeight = "";
+      barCard.style.maxHeight = "";
+    }
+    if (!lineOn && !barOn) {
+      // 兩邊都展開：清掉收合時寫在窄條上的高度；桌機由 syncComplaintLineHeightToBar 重算
+      return false;
+    }
+
+    if (barOn && !lineOn) {
+      var lineH = Math.round(lineCard.getBoundingClientRect().height || lineCard.offsetHeight || 0);
+      if (lineH < 80) lineH = Math.max(220, Math.round((window.innerHeight || 800) * 0.35));
+      barCard.style.boxSizing = "border-box";
+      barCard.style.minHeight = lineH + "px";
+      barCard.style.height = lineH + "px";
+      barCard.style.maxHeight = lineH + "px";
+      return true;
+    }
+    if (lineOn && !barOn) {
+      var barH2 = Math.round(barCard.getBoundingClientRect().height || barCard.offsetHeight || 0);
+      if (barH2 < 80) barH2 = Math.max(220, Math.round((window.innerHeight || 800) * 0.35));
+      lineCard.style.boxSizing = "border-box";
+      lineCard.style.minHeight = barH2 + "px";
+      lineCard.style.height = barH2 + "px";
+      lineCard.style.maxHeight = barH2 + "px";
+      lineCard.style.overflow = "hidden";
+      return true;
+    }
+    if (barOn && lineOn) {
+      barCard.style.minHeight = "180px";
+      barCard.style.height = "180px";
+      barCard.style.maxHeight = "180px";
+      lineCard.style.minHeight = "180px";
+      lineCard.style.height = "180px";
+      lineCard.style.maxHeight = "180px";
+      return true;
+    }
+    return false;
+  }
+
   /** 桌機：右邊線形圖高度跟著左邊長條圖（一樣高；避免互相撐高無限變長） */
   function syncComplaintLineHeightToBar() {
     if (window._complaintLineSyncLock) return false;
@@ -3475,14 +3681,25 @@ function updateLangUI(){
     } catch (e0) {
       desktop = false;
     }
-    if (!desktop) return false;
 
+    const row = document.getElementById("complaintsChartsRow");
     const barCard = document.getElementById("complaintBarCard");
     const barHost = document.getElementById("complaintBarHost");
     const lineCard = document.querySelector(".complaint-line-card");
     const host = document.getElementById("complaintTrendHost");
     if (!barCard || !barHost || !lineCard || !host) return false;
     if (typeof complaintTrendChart === "undefined" || !complaintTrendChart) return false;
+
+    // 任一側收合：窄條高度對齊展開側（桌機／手機都要）
+    if (row && (row.classList.contains("bar-collapsed") || row.classList.contains("line-collapsed"))) {
+      window._complaintLineLastH = 0;
+      try {
+        syncComplaintCollapseStripHeight();
+      } catch (eStrip) {}
+      return true;
+    }
+
+    if (!desktop) return false;
 
     // 只量左邊長條圖本體高度，不要量被右邊撐開後的整張卡
     var hostH = parseInt(barHost.style.height, 10);
@@ -3862,6 +4079,140 @@ function updateLangUI(){
       });
       window._pieCollapseOrientBound = true;
     }
+  }
+
+  function updateComplaintChartsCollapseUI() {
+    const row = document.getElementById("complaintsChartsRow");
+    const barBtn = document.getElementById("complaintBarCollapseBtn");
+    const lineBtn = document.getElementById("complaintLineCollapseBtn");
+    if (!row) return;
+    const C = (LANGS[currentLang] && LANGS[currentLang].complaints) || {};
+    const barOn = row.classList.contains("bar-collapsed");
+    const lineOn = row.classList.contains("line-collapsed");
+    if (barBtn) {
+      barBtn.textContent = barOn ? "›" : "‹";
+      barBtn.setAttribute("aria-expanded", barOn ? "false" : "true");
+      const lab = barOn ? (C.expandBar || "Expand left") : (C.collapseBar || "Collapse left");
+      barBtn.setAttribute("aria-label", lab);
+      barBtn.setAttribute("title", lab);
+    }
+    if (lineBtn) {
+      lineBtn.textContent = lineOn ? "‹" : "›";
+      lineBtn.setAttribute("aria-expanded", lineOn ? "false" : "true");
+      const lab2 = lineOn ? (C.expandLine || "Expand right") : (C.collapseLine || "Collapse right");
+      lineBtn.setAttribute("aria-label", lab2);
+      lineBtn.setAttribute("title", lab2);
+    }
+  }
+
+  function bumpComplaintChartsSoon() {
+    function doResize() {
+      try {
+        syncComplaintCollapseStripHeight();
+      } catch (eStrip) {}
+      try {
+        if (typeof complaintBarChart !== "undefined" && complaintBarChart) complaintBarChart.resize();
+      } catch (e0) {}
+      try {
+        if (typeof complaintTrendChart !== "undefined" && complaintTrendChart) complaintTrendChart.resize();
+      } catch (e1) {}
+      try {
+        scheduleSyncComplaintLineHeightToBar();
+      } catch (e2) {}
+    }
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(function () {
+        doResize();
+        requestAnimationFrame(doResize);
+      });
+    } else {
+      setTimeout(doResize, 0);
+      setTimeout(doResize, 120);
+    }
+  }
+
+  function setupComplaintChartsCollapse() {
+    const row = document.getElementById("complaintsChartsRow");
+    const barBtn = document.getElementById("complaintBarCollapseBtn");
+    const lineBtn = document.getElementById("complaintLineCollapseBtn");
+    if (!row) return;
+
+    function clearStripHeight(el) {
+      if (!el) return;
+      el.style.height = "";
+      el.style.minHeight = "";
+      el.style.maxHeight = "";
+    }
+
+    function applyStripHeight(el, preH) {
+      if (!el || !(preH > 80)) return;
+      el.style.boxSizing = "border-box";
+      el.style.minHeight = preH + "px";
+      el.style.height = preH + "px";
+      el.style.maxHeight = preH + "px";
+    }
+
+    if (barBtn && !barBtn._cBound) {
+      barBtn.addEventListener("click", function (e) {
+        if (e) e.stopPropagation();
+        const lineCard = document.getElementById("complaintLineCard");
+        const barCard = document.getElementById("complaintBarCard");
+        const willCollapse = !row.classList.contains("bar-collapsed");
+        if (willCollapse) {
+          // 不可兩邊都收：若右邊已收，改為「收左、開右」
+          const swap = row.classList.contains("line-collapsed");
+          const preH = Math.round(
+            (swap ? barCard : lineCard)?.getBoundingClientRect().height || 0
+          );
+          if (swap) {
+            row.classList.remove("line-collapsed");
+            window._complaintLineLastH = 0;
+          }
+          row.classList.add("bar-collapsed");
+          applyStripHeight(barCard, preH);
+        } else {
+          row.classList.remove("bar-collapsed");
+          clearStripHeight(barCard);
+        }
+        updateComplaintChartsCollapseUI();
+        bumpComplaintChartsSoon();
+      });
+      barBtn._cBound = true;
+    }
+    if (lineBtn && !lineBtn._cBound) {
+      lineBtn.addEventListener("click", function (e) {
+        if (e) e.stopPropagation();
+        const barCard = document.getElementById("complaintBarCard");
+        const lineCard = document.getElementById("complaintLineCard");
+        const willCollapse = !row.classList.contains("line-collapsed");
+        if (willCollapse) {
+          // 不可兩邊都收：若左邊已收，改為「收右、開左」
+          const swap = row.classList.contains("bar-collapsed");
+          const preH = Math.round(
+            (swap ? lineCard : barCard)?.getBoundingClientRect().height || 0
+          );
+          if (swap) {
+            row.classList.remove("bar-collapsed");
+            clearStripHeight(barCard);
+          }
+          row.classList.add("line-collapsed");
+          applyStripHeight(lineCard, preH);
+          if (lineCard) lineCard.style.overflow = "hidden";
+        } else {
+          row.classList.remove("line-collapsed");
+          window._complaintLineLastH = 0;
+        }
+        updateComplaintChartsCollapseUI();
+        bumpComplaintChartsSoon();
+      });
+      lineBtn._cBound = true;
+    }
+    // 若先前狀態兩邊都收，自動展開右邊
+    if (row.classList.contains("bar-collapsed") && row.classList.contains("line-collapsed")) {
+      row.classList.remove("line-collapsed");
+      window._complaintLineLastH = 0;
+    }
+    updateComplaintChartsCollapseUI();
   }
 
   // ===== 工具函式 =====
@@ -6870,6 +7221,7 @@ function updateLangUI(){
     setupMainTabNav();
     setupPieCollapseToggle();
     setupTrendFullscreenToggle();
+    setupComplaintChartsCollapse();
     init();
   });
 

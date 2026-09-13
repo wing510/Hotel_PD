@@ -7,6 +7,9 @@
 
   <!-- Chart.js 3.9；長條數字改自寫 plugin，不再用 chartjs-plugin-datalabels（file://／resize 易觸發 _listened／_labels 錯誤） -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <!-- 雙指捏合縮放折線圖資料（需 Hammer.js） -->
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
 
   <style>
     /* 全域字型與頁面設定 */
@@ -317,21 +320,11 @@ td.num, th.num {
   order: 2;
 }
 
-/* 左側圓餅收合：右側趨勢圖佔滿 */
+/* 左側圓餅收合：完全隱藏，右側趨勢圖佔滿 */
 .charts.pie-collapsed {
-  gap: 10px;
+  gap: 0;
 }
 .charts.pie-collapsed .chart-left {
-  flex: 0 0 auto;
-  width: 42px;
-  min-width: 42px;
-  max-width: 42px;
-  padding: 10px 6px;
-  align-items: center;
-  overflow: hidden;
-}
-.charts.pie-collapsed .chart-left .chart-titles,
-.charts.pie-collapsed .chart-left canvas {
   display: none !important;
 }
 .charts.pie-collapsed .chart-right {
@@ -343,10 +336,6 @@ td.num, th.num {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 4px;
-}
-.charts.pie-collapsed .chart-left-tools {
-  justify-content: center;
-  margin-bottom: 0;
 }
 .pie-collapse-btn {
   border-radius: 999px;
@@ -368,25 +357,50 @@ td.num, th.num {
   background: rgba(30,41,59,0.95);
   border-color: rgba(56,189,248,0.55);
 }
+/* 頂部：客訴旁圓餅圖示（收合後用來展開） */
+.main-pie-toggle {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid rgba(148,163,184,0.45);
+  background: rgba(15,23,42,0.75);
+  color: #e5e7eb;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.main-pie-toggle[hidden] {
+  display: none !important;
+}
+.main-pie-toggle:hover {
+  border-color: rgba(56,189,248,0.65);
+  background: rgba(30,41,59,0.9);
+}
+.main-pie-toggle:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+.main-pie-toggle svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
 @media (max-width: 768px) {
-  .charts.pie-collapsed {
-    flex-direction: row !important;
-    align-items: stretch;
-  }
-  .charts.pie-collapsed .chart-left {
-    order: 0 !important;
-    flex: 0 0 auto !important;
-    width: 36px !important;
-    min-width: 36px !important;
-    max-width: 36px !important;
-    padding: 8px 4px !important;
-  }
   .charts.pie-collapsed .chart-right {
     order: 1 !important;
     flex: 1 1 auto !important;
-    width: auto !important;
-    max-width: none !important;
-    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+  }
+  .main-pie-toggle {
+    width: 30px;
+    height: 30px;
   }
 }
 
@@ -423,6 +437,7 @@ td.num, th.num {
     .chart-right canvas {
       width: 100% !important;
       /* 刪掉 height: auto !important; */
+      touch-action: none; /* 允許雙指捏合縮放，避免瀏覽器手勢搶走 */
     }
 
     /* 圖表標題文字 */
@@ -1061,24 +1076,79 @@ td.num, th.num {
   text-align: center;
 }
 
-/* 手機橫屏：標題 + 期間同一行，節省垂直空間 */
+/* 手機橫屏：標題 + 期間 + 圖例同一行靠左 */
+.trend-legend-html {
+  display: none;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+.trend-legend-html .tl-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #94a3b8;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.trend-legend-html .tl-item i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  display: inline-block;
+  flex: 0 0 auto;
+}
 @media (max-width: 900px) and (orientation: landscape) {
-  .chart-right .chart-titles,
+  .chart-right .chart-header {
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .chart-right .chart-titles {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px 10px;
+    min-width: 0;
+    text-align: left;
+  }
+  .chart-right .chart-titles h2 {
+    margin: 0 !important;
+    white-space: nowrap;
+    text-align: left !important;
+    font-size: 12px !important;
+  }
+  .chart-right .chart-subtitle {
+    margin: 0 !important;
+    font-size: 10px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    text-align: left !important;
+  }
+  .chart-right .trend-legend-html:not([hidden]) {
+    display: inline-flex;
+    flex: 1 1 auto;
+  }
   .complaint-line-titles {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
-    align-items: baseline;
-    justify-content: center;
+    align-items: center;
+    justify-content: flex-start;
     gap: 6px 10px;
     min-width: 0;
   }
-  .chart-right .chart-titles h2,
   .complaint-line-titles h3 {
     margin: 0 !important;
     white-space: nowrap;
   }
-  .chart-right .chart-subtitle,
   .complaint-line-titles .chart-subtitle {
     margin: 0 !important;
     font-size: 10px !important;
@@ -1559,6 +1629,13 @@ td.num, th.num {
         <nav class="main-tabs" role="tablist" id="mainTabsNav" aria-label="儀表板分區">
           <button type="button" class="main-tab main-tab--active" role="tab" id="mainTabRevenue" aria-selected="true" aria-controls="mainPanelRevenue" data-main-tab="revenue" tabindex="0">營收</button>
           <button type="button" class="main-tab" role="tab" id="mainTabComplaints" aria-selected="false" aria-controls="mainPanelComplaints" data-main-tab="complaints" tabindex="-1">客訴</button>
+          <button type="button" class="main-pie-toggle" id="mainPieToggleBtn" aria-label="展開圓餅圖" title="展開圓餅圖" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M12 3A9 9 0 0 1 21 12H12Z" fill="currentColor" opacity="0.9"/>
+              <path d="M12 12V3A9 9 0 0 0 5.3 18.2Z" fill="currentColor" opacity="0.45"/>
+            </svg>
+          </button>
         </nav>
       </div>
 
@@ -1697,6 +1774,7 @@ td.num, th.num {
           <div class="chart-titles">
             <h2 id="titleLine">營收/指標趨勢</h2>
             <div id="subTitleLine" class="chart-subtitle"></div>
+            <div id="trendLegendHtml" class="trend-legend-html" hidden></div>
           </div>
           <div class="chart-nav">
             <button type="button" class="mode-toggle" aria-label="切換年/月模式"></button>
@@ -2684,6 +2762,9 @@ function updateLangUI(){
       try {
         if (typeof pieChart !== "undefined" && pieChart) pieChart.resize();
       } catch (e1) {}
+      try {
+        applyTrendCardCustomHeight();
+      } catch (e2) {}
     }
     if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(function () {
@@ -2696,19 +2777,51 @@ function updateLangUI(){
     }
   }
 
+  /** 單指上下拖後記住的折線卡片高度；套用到 aspectRatio */
+  function applyTrendCardCustomHeight() {
+    const card = document.querySelector(".chart-right");
+    if (!card || typeof trendChart === "undefined" || !trendChart) return;
+    const h = Number(window._trendCardCustomHeight) || 0;
+    if (!h || h < 160) {
+      card.style.minHeight = "";
+      return;
+    }
+    const maxH = Math.max(220, Math.floor(window.innerHeight * 0.92));
+    const useH = Math.min(Math.max(160, h), maxH);
+    window._trendCardCustomHeight = useH;
+    const header = card.querySelector(".chart-header");
+    const headerH = header ? header.offsetHeight : 40;
+    const w = Math.max(120, card.clientWidth || 300);
+    const chartH = Math.max(120, useH - headerH - 20);
+    card.style.minHeight = useH + "px";
+    try {
+      trendChart.options.maintainAspectRatio = true;
+      trendChart.options.aspectRatio = Math.max(0.45, w / chartH);
+      trendChart.resize();
+    } catch (e) {}
+  }
+
   function updatePieCollapseButtonUI() {
     const charts = document.querySelector(".charts");
     const btn = document.getElementById("pieCollapseBtn");
-    if (!charts || !btn) return;
+    const topBtn = document.getElementById("mainPieToggleBtn");
+    if (!charts) return;
     const collapsed = charts.classList.contains("pie-collapsed");
     const L = (LANGS[currentLang] && LANGS[currentLang].chartTitles) || {};
-    btn.textContent = collapsed ? "›" : "‹";
-    btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
-    const label = collapsed
-      ? (L.expandPie || "Expand pie chart")
-      : (L.collapsePie || "Collapse pie chart");
-    btn.setAttribute("aria-label", label);
-    btn.setAttribute("title", label);
+    if (btn) {
+      btn.textContent = "‹";
+      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      const label = L.collapsePie || "Collapse pie chart";
+      btn.setAttribute("aria-label", label);
+      btn.setAttribute("title", label);
+    }
+    if (topBtn) {
+      // 收合後才顯示頂部圓餅圖示，用來展開
+      topBtn.hidden = !collapsed;
+      const expandLabel = L.expandPie || "Expand pie chart";
+      topBtn.setAttribute("aria-label", expandLabel);
+      topBtn.setAttribute("title", expandLabel);
+    }
   }
 
   function setPieCollapsed(collapsed, opts) {
@@ -2728,15 +2841,29 @@ function updateLangUI(){
 
   function setupPieCollapseToggle() {
     const btn = document.getElementById("pieCollapseBtn");
-    if (!btn || btn._pieBound) return;
-    btn.addEventListener("click", function (e) {
-      if (e) e.stopPropagation();
-      const charts = document.querySelector(".charts");
-      if (!charts) return;
-      window._pieCollapseUserTouched = true;
-      setPieCollapsed(!charts.classList.contains("pie-collapsed"));
-    });
-    btn._pieBound = true;
+    const topBtn = document.getElementById("mainPieToggleBtn");
+    if (btn && !btn._pieBound) {
+      btn.addEventListener("click", function (e) {
+        if (e) e.stopPropagation();
+        const charts = document.querySelector(".charts");
+        if (!charts) return;
+        window._pieCollapseUserTouched = true;
+        setPieCollapsed(true);
+      });
+      btn._pieBound = true;
+    }
+    if (topBtn && !topBtn._pieBound) {
+      topBtn.addEventListener("click", function (e) {
+        if (e) e.stopPropagation();
+        window._pieCollapseUserTouched = true;
+        // 若不在營收頁，先切回營收再展開
+        const panR = document.getElementById("mainPanelRevenue");
+        const btnR = document.getElementById("mainTabRevenue");
+        if (panR && panR.hidden && btnR) btnR.click();
+        setPieCollapsed(false);
+      });
+      topBtn._pieBound = true;
+    }
 
     applyPieCollapseDefaultByViewport(true);
 
@@ -2994,6 +3121,9 @@ function updateLangUI(){
 
     // 先判斷是否為手機寬度（更準）
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    const isMobileLandscape =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(max-width: 900px) and (orientation: landscape)").matches;
 
     /*
      * 客訴長條圖數字標籤使用自寫 afterDatasetsDraw plugin，不依賴 chartjs-plugin-datalabels。
@@ -3005,19 +3135,44 @@ function updateLangUI(){
     const axisTickXPx = isMobile ? 9 : 11;
     const legendFontPx = isMobile ? 9 : 12;
 
+    function syncTrendHtmlLegend(dsList) {
+      const el = document.getElementById("trendLegendHtml");
+      if (!el) return;
+      if (!isMobileLandscape) {
+        el.hidden = true;
+        el.innerHTML = "";
+        return;
+      }
+      el.hidden = false;
+      el.innerHTML = (dsList || [])
+        .map(function (ds) {
+          const color = ds.borderColor || "#94a3b8";
+          const label = ds.label != null ? String(ds.label) : "";
+          return (
+            '<span class="tl-item"><i style="background:' +
+            color +
+            '"></i>' +
+            label +
+            "</span>"
+          );
+        })
+        .join("");
+    }
+
     trendChart = new Chart(document.getElementById("trendChart"), {
       type: "line",
       data: { labels, datasets },
       options: {
         responsive: true,
         maintainAspectRatio: true,           // 交給比例算高度
-        aspectRatio: isMobile ? 1.2 : 2,     // 手機高一點，桌機維持 2:1
+        aspectRatio: isMobileLandscape ? 2.4 : (isMobile ? 1.2 : 2),
         // 讓繪圖區更貼近左右邊（提升可用寬度）
         layout: { padding: { left: (isMobile ? 0 : 6), right: (isMobile ? 0 : 6), top:4, bottom:4 } },
 
         plugins:{
           legend:{ 
-            display:true,
+            /* 手機橫屏：圖例改到標題列 HTML，與標題/期間同一行 */
+            display: !isMobileLandscape,
             labels:{
               boxWidth: 10,
               boxHeight: 10,
@@ -3046,6 +3201,28 @@ function updateLangUI(){
             color: "#94a3b8",
             font: { size: isMobile ? 9 : 10, weight: "400" },
             padding: { top: 18, bottom: 2 }
+          },
+          zoom: {
+            limits: {
+              x: { min: "original", max: "original" },
+              yLeft: { min: "original", max: "original" },
+              yRight: { min: "original", max: "original" },
+              yPercent: { min: 0, max: 100 }
+            },
+            pan: {
+              /* 單指平移關閉，避免跟左右滑切期間衝突；雙指捏合縮放即可 */
+              enabled: false
+            },
+            zoom: {
+              wheel: {
+                enabled: true,
+                speed: 0.1
+              },
+              pinch: {
+                enabled: true
+              },
+              mode: "xy"
+            }
           }
         },
         scales:{
@@ -3146,6 +3323,8 @@ function updateLangUI(){
         }
       }
     });
+    syncTrendHtmlLegend(datasets);
+    applyTrendCardCustomHeight();
 
     // === 圓餅圖 ===
     let totals = COLS.reduce((o,c)=>(o[c.key]=0,o),{});
@@ -5282,24 +5461,93 @@ function updateLangUI(){
     render();
   });
 
-  // 手機版：在折線圖卡片上左右滑動切換月份 / 年份
+  // 手機版：折線圖左右滑切期間；單指上下拖調卡片高度；雙指捏合縮放資料
   if (trendCard) {
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartTime = 0;
+    let touchWasMulti = false;
+    let lastTapAt = 0;
+    let resizeMode = false;      // 已判定為上下拖調高度
+    let swipeLocked = false;     // 已判定為左右滑
+    let startCardH = 0;
 
     trendCard.addEventListener('touchstart', (e) => {
+      touchWasMulti = !!(e.touches && e.touches.length > 1);
+      resizeMode = false;
+      swipeLocked = false;
       const t = e.touches[0];
       touchStartX = t.clientX;
       touchStartY = t.clientY;
       touchStartTime = Date.now();
+      startCardH = Math.round(trendCard.getBoundingClientRect().height || 0);
     }, { passive: true });
 
+    trendCard.addEventListener('touchmove', (e) => {
+      if (e.touches && e.touches.length > 1) {
+        touchWasMulti = true;
+        resizeMode = false;
+        return;
+      }
+      if (touchWasMulti || swipeLocked) return;
+      const t = e.touches[0];
+      if (!t) return;
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
+
+      // 尚未鎖定手勢：判斷上下拖 or 左右滑
+      if (!resizeMode) {
+        if (Math.abs(dy) < 14 && Math.abs(dx) < 14) return;
+        if (Math.abs(dx) > Math.abs(dy) * 1.15) {
+          swipeLocked = true;
+          return;
+        }
+        if (Math.abs(dy) > Math.abs(dx) * 1.05) {
+          resizeMode = true;
+        } else {
+          return;
+        }
+      }
+
+      // 上下拖：調高度（往下拖＝變高）
+      const maxH = Math.max(220, Math.floor(window.innerHeight * 0.92));
+      const nextH = Math.min(maxH, Math.max(160, startCardH + dy));
+      window._trendCardCustomHeight = nextH;
+      applyTrendCardCustomHeight();
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+
     trendCard.addEventListener('touchend', (e) => {
+      // 雙指捏合中：不觸發切期間
+      if (touchWasMulti || (e.touches && e.touches.length > 0)) {
+        touchWasMulti = false;
+        resizeMode = false;
+        swipeLocked = false;
+        return;
+      }
+      // 剛做完調高度：不切期間
+      if (resizeMode) {
+        resizeMode = false;
+        swipeLocked = false;
+        return;
+      }
+
       const t = e.changedTouches[0];
       const dx = t.clientX - touchStartX;
       const dy = t.clientY - touchStartY;
       const dt = Date.now() - touchStartTime;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // 雙擊空白處：重置縮放
+      const now = Date.now();
+      if (dist < 18 && dt < 350 && now - lastTapAt < 320) {
+        lastTapAt = 0;
+        try {
+          if (trendChart && typeof trendChart.resetZoom === "function") trendChart.resetZoom();
+        } catch (err) {}
+        return;
+      }
+      lastTapAt = now;
 
       // 基本條件：時間不要太久、位移夠大且主要是左右滑
       if (dt > 600) return;

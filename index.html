@@ -421,6 +421,9 @@ td.num, th.num {
   white-space: normal;
   text-align: center;
 }
+.chart-right .chart-subtitle {
+  text-align: left;
+}
 
 /* (reverted) pie HTML legend removed */
     /* 圓餅圖 canvas 自適應（恢復原本設定，不強制正圓） */
@@ -447,7 +450,7 @@ td.num, th.num {
       text-align: left;
     }
     .chart-right h2 {
-      text-align: center;
+      text-align: left;
     }
 
     /* 載入中遮罩層：深色版 */
@@ -858,16 +861,25 @@ td.num, th.num {
         margin: 4px 0 6px !important;
         letter-spacing: 0.06em;
       }
+      .chart-right h2{
+        text-align: left !important;
+      }
       .chart-left h2 {
         margin: 4px 0 4px !important;
       }
       .chart-titles h2{
         text-align: center !important;
       }
+      .chart-right .chart-titles h2{
+        text-align: left !important;
+      }
       .chart-subtitle{
         font-size: 11px;
         margin-bottom: 8px;
         text-align: center;
+      }
+      .chart-right .chart-subtitle{
+        text-align: left;
       }
       .chart-left .chart-subtitle {
         margin-bottom: 6px !important;
@@ -1090,7 +1102,7 @@ td.num, th.num {
   margin-bottom: 8px;
 }
 .chart-right .chart-header {
-  justify-content: center;
+  justify-content: flex-start;
   position: relative;
 }
 
@@ -1105,24 +1117,33 @@ td.num, th.num {
   box-sizing: border-box;
 }
 .chart-right .chart-titles {
-  padding: 0 88px; /* 預留右側年月／全螢幕鈕，視覺仍置中 */
+  align-items: flex-start;
+  text-align: left;
+  padding: 0 88px 0 0; /* 只預留右側年月鈕，標題區靠左 */
 }
 
 .chart-titles h2{
   margin: 0 0 6px;
   text-align: center;
 }
+.chart-right .chart-titles h2 {
+  text-align: left;
+}
 
-/* 手機橫屏：標題 + 期間 + 圖例同一行靠左 */
+/* 圖例：放在期間下面，靠左（圓形色點比照下拉） */
 .trend-legend-html {
   display: none;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
   min-width: 0;
   overflow: hidden;
   width: 100%;
+  margin-top: 4px;
+}
+.trend-legend-html:not([hidden]) {
+  display: flex;
 }
 .trend-legend-html .tl-item {
   display: inline-flex;
@@ -1336,14 +1357,14 @@ td.num, th.num {
     margin-right: 4px;
     padding-right: max(4px, env(safe-area-inset-right, 0px));
   }
-  /* 橫屏：標題、期間、圖例同一行靠左 */
+  /* 橫屏：標題+期間同一行靠左；圖例在期間下面 */
   .chart-right .chart-titles {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
     align-items: center;
-    justify-content: flex-start;
-    gap: 8px 10px;
+    column-gap: 10px;
+    row-gap: 2px;
     min-width: 0;
     text-align: left;
     width: 100%;
@@ -1351,37 +1372,42 @@ td.num, th.num {
     box-sizing: border-box;
   }
   .chart-right .chart-titles h2 {
+    grid-column: 1;
+    grid-row: 1;
     margin: 0 !important;
     white-space: nowrap;
     text-align: left !important;
     font-size: 12px !important;
   }
   .chart-right .chart-subtitle {
+    grid-column: 2;
+    grid-row: 1;
     margin: 0 !important;
     font-size: 10px !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
-    max-width: none;
-    flex: 0 1 auto;
+    max-width: 100%;
     text-align: left !important;
   }
   .chart-right .trend-legend-html:not([hidden]) {
-    display: inline-flex;
-    flex: 1 1 auto;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    flex: 0 0 auto;
     justify-content: flex-start;
-    flex-wrap: nowrap;
-    width: auto;
+    flex-wrap: wrap;
+    width: 100%;
+    margin-top: 0;
     overflow: hidden;
   }
   .complaint-line-titles {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
-    justify-content: flex-start;
-    gap: 6px 10px;
+    column-gap: 10px;
+    row-gap: 2px;
     min-width: 0;
     text-align: left;
   }
@@ -3675,11 +3701,7 @@ function updateLangUI(){
     function syncTrendHtmlLegend(dsList) {
       const el = document.getElementById("trendLegendHtml");
       if (!el) return;
-      if (!isMobileLandscape) {
-        el.hidden = true;
-        el.innerHTML = "";
-        return;
-      }
+      // 一律放在「期間」下面（標題區 HTML），不畫在 canvas 上
       el.hidden = false;
       el.innerHTML = (dsList || [])
         .map(function (ds) {
@@ -3708,30 +3730,16 @@ function updateLangUI(){
 
         plugins:{
           legend:{ 
-            /* 手機橫屏：圖例改到標題列 HTML；其餘用 Chart.js 圖例（圓形色點比照下拉） */
-            display: !isMobileLandscape,
+            /* 圖例改到標題區「期間」下方 HTML，canvas 內建圖例關閉 */
+            display: false,
+            align: "start",
             labels:{
               boxWidth: 10,
               boxHeight: 10,
               color: "#f1f5f9",
               font:{ size: legendFontPx },
               usePointStyle: true,
-              pointStyle: "circle",
-              generateLabels: function (chart) {
-                const dsList = chart.data.datasets || [];
-                return dsList.map(function (ds, i) {
-                  const color = ds.borderColor || "#94a3b8";
-                  return {
-                    text: ds.label != null ? String(ds.label) : "",
-                    fillStyle: color,
-                    strokeStyle: "rgba(255,255,255,0.25)",
-                    lineWidth: 1,
-                    hidden: !chart.isDatasetVisible(i),
-                    datasetIndex: i,
-                    pointStyle: "circle"
-                  };
-                });
-              }
+              pointStyle: "circle"
             }
           },
           tooltip:{
@@ -3798,7 +3806,7 @@ function updateLangUI(){
               drawOnChartArea:false,
               color: "rgba(148, 163, 184, 0.25)"
             },
-            grace: '5%',
+            grace: '10%', /* 上方多留白，高點（如平均房價）不貼頂 */
             ticks: {
               color: "#e5e7eb",
               callback: function(value) {
@@ -3824,7 +3832,7 @@ function updateLangUI(){
             type:'linear',
             position:'right',
             min:0,
-            max:100,
+            max:105, /* 上方留到約 105，高住房率不貼頂 */
             grid:{ 
               drawOnChartArea:false,
               color: "rgba(148, 163, 184, 0.2)"
@@ -3841,8 +3849,7 @@ function updateLangUI(){
               maxRotation: 0,
               minRotation: 0,
               font: { size: axisTickPx }
-            },
-            grace: 6
+            }
           },
           x: {
             ticks: {

@@ -303,6 +303,32 @@ td.num, th.num {
   max-width: 100%;
 }
 
+/* 桌機：兩卡各自依內容高度，勿等高拉伸留下大塊空白 */
+@media (min-width: 769px) {
+  .charts {
+    align-items: flex-start;
+  }
+  .chart-left-tools {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    margin-bottom: 0;
+    z-index: 2;
+  }
+  .chart-left .chart-titles {
+    padding-right: 40px;
+  }
+  .chart-left h2 {
+    margin: 0 0 4px !important;
+  }
+  .chart-left .chart-subtitle {
+    margin: 0 0 6px !important;
+  }
+  .chart-right {
+    min-height: 0;
+  }
+}
+
 .chart-left { 
   flex: 3;
   order: 1;
@@ -728,10 +754,10 @@ td.num, th.num {
     align-items: center;
     justify-content: center;
     position: absolute;
-    top: 16px;
-    right: 14px;
-    width: 32px;
-    height: 32px;
+    top: 10px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
     border-radius: 999px;
     border: 1px solid rgba(148,163,184,0.5);
     background: rgba(2,6,23,0.9);
@@ -873,13 +899,31 @@ td.num, th.num {
       .chart-right .chart-titles h2{
         text-align: left !important;
       }
+      /* 直向手機：標題／期間／圖例靠左堆疊（勿被桌機 grid 蓋掉） */
+      .chart-right .chart-titles {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        text-align: left !important;
+        row-gap: 0;
+        column-gap: 0;
+      }
+      .chart-right .chart-titles h2,
+      .chart-right .chart-subtitle,
+      .chart-right .trend-legend-html:not([hidden]) {
+        grid-column: auto !important;
+        grid-row: auto !important;
+      }
+      .chart-right .chart-subtitle{
+        text-align: left !important;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+      }
       .chart-subtitle{
         font-size: 11px;
         margin-bottom: 8px;
         text-align: center;
-      }
-      .chart-right .chart-subtitle{
-        text-align: left;
       }
       .chart-left .chart-subtitle {
         margin-bottom: 6px !important;
@@ -906,7 +950,7 @@ td.num, th.num {
   height: 100vh;
   background: radial-gradient(circle at top, #020617 0, #020617 55%, #020617 100%);
   box-shadow: 2px 0 24px rgba(15,23,42,0.95);
-  padding: 60px 12px 16px 12px;  /* 上方留位置給 header */
+  padding: 48px 12px 16px 12px;  /* 頂部只留 X 的高度 */
   box-sizing: border-box;
   grid-template-columns: 1fr;    /* 一欄直排 */
   gap: 10px;
@@ -949,7 +993,7 @@ td.num, th.num {
   /* 再縮小手機側邊欄的間距 & 高度 */
   .filters {
     gap: 8px !important;           /* 每個項目上下 8px */
-    padding-top: 70px !important;  /* 頂部給標題 & X 的空間 */
+    padding-top: 48px !important;  /* 頂部只留 X，空白縮小 */
   }
 
   .filters .card {
@@ -975,7 +1019,7 @@ td.num, th.num {
   /* 整個側邊欄的間距縮到最小 */
   .filters {
     gap: 10px !important;       /* 每個項目之間上下約 10px */
-    padding-top: 70px !important;
+    padding-top: 48px !important;
   }
 
   /* 完全去除卡片額外空間（真正讓排版變緊） */
@@ -1011,7 +1055,7 @@ td.num, th.num {
     display: flex !important;
     flex-direction: column !important;
     gap: 4px !important;   /* ← 這裡才是關鍵 */
-    padding-top: 70px !important;
+    padding-top: 48px !important;
   }
 
   /* 不要 card padding/margin，避免撐開 */
@@ -1053,7 +1097,7 @@ td.num, th.num {
     display: flex !important;
     flex-direction: column !important;
     gap: 10px !important;          /* 視覺上一行的空白 */
-    padding-top: 70px !important;
+    padding-top: 48px !important;
   }
 
   /* 每一組（年份、月份、貨幣...）自己不要再加額外空白，只處理 label + select */
@@ -1116,18 +1160,52 @@ td.num, th.num {
   width: 100%;
   box-sizing: border-box;
 }
+/* 折線標題區：手機維持靠左堆疊；桌機才標題+期間同一行 */
 .chart-right .chart-titles {
   align-items: flex-start;
   text-align: left;
   padding: 0 88px 0 0; /* 只預留右側年月鈕，標題區靠左 */
 }
-
 .chart-titles h2{
   margin: 0 0 6px;
   text-align: center;
 }
 .chart-right .chart-titles h2 {
   text-align: left;
+  margin: 0;
+}
+.chart-right .chart-subtitle {
+  margin: 0;
+  text-align: left;
+}
+@media (min-width: 769px) {
+  .chart-right .chart-titles {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 2px;
+  }
+  .chart-right .chart-titles h2 {
+    grid-column: 1;
+    grid-row: 1;
+    white-space: nowrap;
+  }
+  .chart-right .chart-subtitle {
+    grid-column: 2;
+    grid-row: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .chart-right .trend-legend-html:not([hidden]) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin-top: 0;
+  }
 }
 
 /* 圖例：放在期間下面，靠左（圓形色點比照下拉） */
@@ -1213,10 +1291,10 @@ td.num, th.num {
     align-items: center;
     justify-content: center;
     position: absolute;
-    top: 16px;
-    right: 14px;
-    width: 32px;
-    height: 32px;
+    top: 10px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
     border-radius: 999px;
     border: 1px solid rgba(148,163,184,0.5);
     background: rgba(2,6,23,0.9);
@@ -1251,7 +1329,7 @@ td.num, th.num {
     height: 100vh !important;
     background: radial-gradient(circle at top, #020617 0, #020617 55%, #020617 100%) !important;
     box-shadow: 2px 0 24px rgba(15,23,42,0.95);
-    padding: 70px 12px 16px 12px !important;
+    padding: 48px 12px 16px 12px !important;
     box-sizing: border-box !important;
     grid-template-columns: 1fr !important;
     gap: 8px !important;
@@ -1523,6 +1601,19 @@ td.num, th.num {
 }
 .chart-right.trend-fs .chart-header {
   flex: 0 0 auto;
+}
+/* 滿版：標題靠左（對齊 Y 由 JS paddingLeft） */
+.chart-right.trend-fs .chart-titles {
+  align-items: flex-start !important;
+  text-align: left !important;
+  justify-items: start;
+}
+.chart-right.trend-fs .chart-titles h2,
+.chart-right.trend-fs .chart-subtitle {
+  text-align: left !important;
+}
+.chart-right.trend-fs .trend-legend-html:not([hidden]) {
+  justify-content: flex-start !important;
 }
 .chart-right.trend-fs > canvas {
   flex: 0 0 auto !important;
@@ -2462,8 +2553,8 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
         exitFullscreen: "Exit fullscreen"
       },
       modeLabels: {
-        year: "Year",
-        month: "Month"
+        year: "Y",
+        month: "M"
       },
       table: { 
         weekday: "Day", 
@@ -2539,7 +2630,7 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
         periodRange: "Dari — Sampai",
         periodStart: "Mulai",
         periodEnd: "Akhir",
-        periodClear: "Hapus rentang (semua tahun & semua bulan)",
+        periodClear: "Hapus rentang (semua Thn & semua Bln)",
         periodYears: "Rentang tahun",
         periodYearStart: "Mulai",
         periodYearEnd: "Sampai",
@@ -2564,8 +2655,8 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
         exitFullscreen: "Keluar layar penuh"
       },
       modeLabels: {
-        year: "Tahun",
-        month: "Bulan"
+        year: "Thn",
+        month: "Bln"
       },
       table: { 
         weekday: "Hari", 
@@ -2925,9 +3016,9 @@ function updateLangUI(){
     const ms = getMonthFilterSet();
     const yTxt = yr
       ? (yr.startYear === yr.endYear ? String(yr.startYear) : `${yr.startYear}～${yr.endYear}`)
-      : (currentLang === 'zh' ? '全部年份' : currentLang === 'en' ? 'All years' : 'Semua tahun');
+      : (currentLang === 'zh' ? '全部年份' : currentLang === 'en' ? 'All years' : 'Semua Thn');
     const mTxt = ms ? [...ms].sort((a, b) => a - b).map(m => monthLabel(m)).join('、')
-      : (currentLang === 'zh' ? '全部月份' : currentLang === 'en' ? 'All months' : 'Semua bulan');
+      : (currentLang === 'zh' ? '全部月份' : currentLang === 'en' ? 'All months' : 'Semua Bln');
     periodBtn.textContent = `${yTxt} · ${mTxt}`;
   }
 
@@ -3111,6 +3202,9 @@ function updateLangUI(){
       try {
         applyDesktopTrendHeightLock();
       } catch (e3) {}
+      try {
+        alignTrendTitleToYAxis();
+      } catch (e4) {}
     }
     if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(function () {
@@ -3128,6 +3222,18 @@ function updateLangUI(){
     const card = document.querySelector(".chart-right");
     if (!card || typeof trendChart === "undefined" || !trendChart) return;
     const isFs = card.classList.contains("trend-fs");
+    // 桌機一般模式：清掉手機遺留的自訂高度，避免卡片被撐出多餘空白
+    if (isDesktopChartsLayout() && !isMobileLandscapeCharts() && !isFs) {
+      window._trendCardCustomHeight = 0;
+      card.style.minHeight = "";
+      try {
+        trendChart.options.maintainAspectRatio = true;
+        if (!applyDesktopTrendHeightLock()) {
+          trendChart.options.aspectRatio = 2;
+        }
+      } catch (e0) {}
+      return;
+    }
     const h = Number(window._trendCardCustomHeight) || 0;
     if (!h || h < 80) {
       if (!isFs) card.style.minHeight = "";
@@ -3202,6 +3308,40 @@ function updateLangUI(){
     }
   }
 
+  /**
+   * 標題左緣對齊 Y 軸（chartArea.left）：
+   * - 桌機：靠左 + 對齊 Y
+   * - 手機直版：只靠左（不對齊 Y）
+   * - 手機橫版／滿版：靠左 + 對齊 Y
+   */
+  function shouldAlignTrendTitleToYAxis() {
+    try {
+      const card = document.querySelector(".chart-right");
+      if (card && card.classList.contains("trend-fs")) return true; // 滿版
+      if (isMobileLandscapeCharts()) return true; // 手機橫版
+      if (isDesktopChartsLayout()) return true; // 桌機
+      return false; // 手機直版
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function alignTrendTitleToYAxis() {
+    const titles = document.querySelector(".chart-right .chart-titles");
+    if (!titles) return;
+    if (!shouldAlignTrendTitleToYAxis() || typeof trendChart === "undefined" || !trendChart) {
+      titles.style.paddingLeft = "";
+      return;
+    }
+    try {
+      const area = trendChart.chartArea;
+      const left = area && Number.isFinite(area.left) ? Math.round(area.left) : 0;
+      titles.style.paddingLeft = left > 0 ? left + "px" : "";
+    } catch (e) {
+      titles.style.paddingLeft = "";
+    }
+  }
+
   /** 桌機收合圓餅後：折線只變寬、高度維持收合前 */
   function applyDesktopTrendHeightLock() {
     if (!isDesktopChartsLayout()) return false;
@@ -3216,6 +3356,7 @@ function updateLangUI(){
       trendChart.options.maintainAspectRatio = true;
       trendChart.options.aspectRatio = w / lockH;
       trendChart.resize();
+      alignTrendTitleToYAxis();
       return true;
     } catch (e) {
       return false;
@@ -3721,6 +3862,12 @@ function updateLangUI(){
     trendChart = new Chart(document.getElementById("trendChart"), {
       type: "line",
       data: { labels, datasets },
+      plugins: [{
+        id: "alignTitleToYAxis",
+        afterLayout: function () {
+          try { alignTrendTitleToYAxis(); } catch (eAlign) {}
+        }
+      }],
       options: {
         responsive: true,
         maintainAspectRatio: true,           // 交給比例算高度
@@ -3866,6 +4013,7 @@ function updateLangUI(){
     syncTrendHtmlLegend(datasets);
     applyTrendCardCustomHeight();
     applyDesktopTrendHeightLock();
+    alignTrendTitleToYAxis();
 
     // === 圓餅圖 ===
     let totals = COLS.reduce((o,c)=>(o[c.key]=0,o),{});

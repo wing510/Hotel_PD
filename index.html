@@ -308,6 +308,8 @@ td.num, th.num {
   padding-top: 10px;
   padding-bottom: 10px;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .chart-right { 
@@ -408,10 +410,10 @@ td.num, th.num {
 }
 
 /* (reverted) pie HTML legend removed */
-    /* 圓餅圖 canvas 自適應 */
+    /* 圓餅圖 canvas 自適應（恢復原本設定，不強制正圓） */
     .chart-left canvas {
       width: 100% !important;   /* 寬度隨容器調整 */
-      height: auto !important;  /* 高度保持比例 */
+      height: auto !important;  /* 高度隨 canvas 屬性比例 */
       max-width: none;          /* 不限制最大寬度 */
     }
 
@@ -787,8 +789,20 @@ td.num, th.num {
         margin: 0 auto;
         padding-left: 10px;
         padding-right: 10px;
-        padding-top: 10px;
-        padding-bottom: 10px;
+        padding-top: 8px !important;
+        padding-bottom: 8px;
+        position: relative;
+      }
+      /* 收合鈕改絕對定位，標題可靠近卡片上緣（仍留一點空白） */
+      .chart-left-tools {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        margin-bottom: 0;
+        z-index: 2;
+      }
+      .chart-left .chart-titles {
+        padding-right: 34px;
       }
       #pieChart{ height: 200px !important; }
 
@@ -803,6 +817,9 @@ td.num, th.num {
         margin: 4px 0 6px !important;
         letter-spacing: 0.06em;
       }
+      .chart-left h2 {
+        margin: 4px 0 4px !important;
+      }
       .chart-titles h2{
         text-align: center !important;
       }
@@ -810,6 +827,9 @@ td.num, th.num {
         font-size: 11px;
         margin-bottom: 8px;
         text-align: center;
+      }
+      .chart-left .chart-subtitle {
+        margin-bottom: 6px !important;
       }
 
       /* 表格字體縮小 */
@@ -1039,6 +1059,34 @@ td.num, th.num {
 .chart-titles h2{
   margin: 0 0 6px;
   text-align: center;
+}
+
+/* 手機橫屏：標題 + 期間同一行，節省垂直空間 */
+@media (max-width: 900px) and (orientation: landscape) {
+  .chart-right .chart-titles,
+  .complaint-line-titles {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 6px 10px;
+    min-width: 0;
+  }
+  .chart-right .chart-titles h2,
+  .complaint-line-titles h3 {
+    margin: 0 !important;
+    white-space: nowrap;
+  }
+  .chart-right .chart-subtitle,
+  .complaint-line-titles .chart-subtitle {
+    margin: 0 !important;
+    font-size: 10px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
 }
 
 .chart-nav {
@@ -2993,7 +3041,11 @@ function updateLangUI(){
           title: {
             display: true,
             text: "Y-axis多軸：L=Total/Room、R=Others...",
-            align: "start"
+            position: "bottom",
+            align: "start",
+            color: "#94a3b8",
+            font: { size: isMobile ? 9 : 10, weight: "400" },
+            padding: { top: 18, bottom: 2 }
           }
         },
         scales:{

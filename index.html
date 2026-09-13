@@ -1106,17 +1106,22 @@ td.num, th.num {
     overflow-x: hidden;
     max-width: 100%;
   }
-  header {
-    padding: 6px 0;
-  }
   .wrap {
-    padding: 8px max(10px, env(safe-area-inset-right, 0px)) 8px max(10px, env(safe-area-inset-left, 0px));
+    /* 右側多留空，避開橫屏系統導覽鍵／手勢條（safe-area 在部分 Android 會是 0） */
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: max(12px, calc(env(safe-area-inset-left, 0px) + 8px));
+    padding-right: max(48px, calc(env(safe-area-inset-right, 0px) + 16px));
     max-width: 100%;
     box-sizing: border-box;
+  }
+  header {
+    padding: 6px 0;
   }
   header .wrap {
     padding-top: 4px;
     padding-bottom: 4px;
+    /* 沿用上方 .wrap 左右安全距，避免標題／分頁被系統鍵擋住 */
   }
   main.wrap {
     padding-top: 4px;
@@ -1278,6 +1283,9 @@ td.num, th.num {
   }
   .chart-right .chart-nav {
     flex: 0 0 auto;
+    /* 年月／全螢幕列再多一點右邊距，避免貼到系統鍵 */
+    margin-right: 4px;
+    padding-right: max(4px, env(safe-area-inset-right, 0px));
   }
   .chart-right .chart-titles {
     display: flex;
@@ -1408,10 +1416,22 @@ td.num, th.num {
   border-radius: 0 !important;
   padding-top: max(8px, env(safe-area-inset-top, 0px)) !important;
   padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
-  padding-left: max(10px, env(safe-area-inset-left, 0px)) !important;
-  padding-right: max(10px, env(safe-area-inset-right, 0px)) !important;
+  padding-left: max(12px, calc(env(safe-area-inset-left, 0px) + 8px)) !important;
+  padding-right: max(48px, calc(env(safe-area-inset-right, 0px) + 16px)) !important;
   order: 0 !important;
   box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+.chart-right.trend-fs .chart-header {
+  flex: 0 0 auto;
+}
+.chart-right.trend-fs > canvas {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  height: 100% !important;
 }
 body.trend-fs-open {
   overflow: hidden !important;
@@ -2997,10 +3017,24 @@ function updateLangUI(){
     }
   }
 
-  /** 單指上下拖後記住的折線卡片高度；套用到 aspectRatio */
+  /** 單指上下拖後記住的折線卡片高度；套用到 aspectRatio（全螢幕改填滿剩餘高度） */
   function applyTrendCardCustomHeight() {
     const card = document.querySelector(".chart-right");
     if (!card || typeof trendChart === "undefined" || !trendChart) return;
+    const isFs = card.classList.contains("trend-fs");
+
+    // 全螢幕：取消比例限制，讓 canvas 吃滿剩餘空間
+    if (isFs) {
+      card.style.minHeight = "";
+      window._trendCardCustomHeight = Math.floor(window.innerHeight || 0);
+      try {
+        trendChart.options.maintainAspectRatio = false;
+        trendChart.options.aspectRatio = undefined;
+        trendChart.resize();
+      } catch (e) {}
+      return;
+    }
+
     const h = Number(window._trendCardCustomHeight) || 0;
     if (!h || h < 160) {
       card.style.minHeight = "";
@@ -3018,6 +3052,26 @@ function updateLangUI(){
       trendChart.options.maintainAspectRatio = true;
       trendChart.options.aspectRatio = Math.max(0.45, w / chartH);
       trendChart.resize();
+    } catch (e) {}
+  }
+
+  function restoreTrendChartAspectAfterFullscreen() {
+    const card = document.querySelector(".chart-right");
+    if (!card || typeof trendChart === "undefined" || !trendChart) return;
+    try {
+      // 離開全螢幕：恢復可拖高度／比例模式
+      const isMobileLandscape =
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(orientation: landscape) and (max-height: 600px), (max-width: 900px) and (orientation: landscape)").matches;
+      const isMobile = window.matchMedia("(max-width: 768px)").matches || isMobileLandscape;
+      trendChart.options.maintainAspectRatio = true;
+      if (!window._trendCardCustomHeight || window._trendCardCustomHeight < 160) {
+        trendChart.options.aspectRatio = isMobileLandscape ? 2.4 : (isMobile ? 1.2 : 2);
+        card.style.minHeight = "";
+        trendChart.resize();
+      } else {
+        applyTrendCardCustomHeight();
+      }
     } catch (e) {}
   }
 
@@ -3078,10 +3132,20 @@ function updateLangUI(){
     const card = document.querySelector(".chart-right");
     if (!card) return;
     const want = !!on;
+    const wasOn = card.classList.contains("trend-fs");
     card.classList.toggle("trend-fs", want);
     document.body.classList.toggle("trend-fs-open", want);
     updateTrendFullscreenButtonUI();
-    bumpRevenueChartsSoon();
+    if (want) {
+      // 進全螢幕直接拉滿
+      window._trendCardCustomHeight = Math.floor(window.innerHeight || 0);
+      bumpRevenueChartsSoon();
+    } else if (wasOn) {
+      restoreTrendChartAspectAfterFullscreen();
+      bumpRevenueChartsSoon();
+    } else {
+      bumpRevenueChartsSoon();
+    }
   }
 
   function setupTrendFullscreenToggle() {
@@ -5759,8 +5823,11 @@ function updateLangUI(){
         }
       }
 
-      // 上下拖：調高度（往下拖＝變高）
-      const maxH = Math.max(220, Math.floor(window.innerHeight * 0.92));
+      // 上下拖：調高度（往下拖＝變高；全螢幕可拉滿整屏）
+      const isFs = trendCard.classList.contains("trend-fs");
+      const maxH = isFs
+        ? Math.floor(window.innerHeight)
+        : Math.max(220, Math.floor(window.innerHeight * 0.92));
       const nextH = Math.min(maxH, Math.max(160, startCardH + dy));
       window._trendCardCustomHeight = nextH;
       applyTrendCardCustomHeight();

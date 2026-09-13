@@ -1689,9 +1689,9 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
 }
 /* 房號下拉盡量短，把橫向空間留給主題（避免主題一長就換行） */
 .complaints-toolbar .field.field-complaint-room {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   min-width: 0;
-  max-width: 6.75rem;
+  max-width: 9.5rem;
 }
 .complaints-toolbar .field.field-complaint-room select {
   min-width: 0;
@@ -1707,6 +1707,115 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
   min-width: 0;
   width: 100%;
   max-width: 100%;
+}
+/* 房號／主題：下拉 + 關鍵字搜尋 */
+.complaint-combo {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+.complaint-combo-native {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  clip: rect(0, 0, 0, 0);
+}
+.complaint-combo-btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.55);
+  background: rgba(2,6,23,0.65);
+  color: #e5e7eb;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.complaint-combo-btn:hover {
+  border-color: rgba(56,189,248,0.55);
+}
+.complaint-combo.open .complaint-combo-btn {
+  border-color: rgba(56,189,248,0.75);
+  box-shadow: 0 0 0 3px rgba(56,189,248,0.18);
+}
+.complaint-combo-panel {
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 40;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(148,163,184,0.45);
+  background: radial-gradient(circle at top, #0b1120 0, #020617 70%);
+  box-shadow: 0 14px 32px rgba(2,6,23,0.9);
+  box-sizing: border-box;
+  min-width: 180px;
+}
+.complaint-combo.open .complaint-combo-panel {
+  display: block;
+}
+.field-complaint-subject .complaint-combo-panel {
+  min-width: min(100%, 280px);
+  width: max(100%, 240px);
+}
+.complaint-combo-search {
+  width: 100%;
+  box-sizing: border-box;
+  height: 32px;
+  margin-bottom: 6px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148,163,184,0.45);
+  background: rgba(2,6,23,0.85);
+  color: #e5e7eb;
+  font-size: 13px;
+  outline: none;
+}
+.complaint-combo-search:focus {
+  border-color: rgba(56,189,248,0.75);
+}
+.complaint-combo-list {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.complaint-combo-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #e5e7eb;
+  font-size: 13px;
+  cursor: pointer;
+}
+.complaint-combo-item:hover,
+.complaint-combo-item.active {
+  background: rgba(56,189,248,0.16);
+}
+.complaint-combo-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #94a3b8;
 }
 @media (min-width: 400px) {
   .complaints-toolbar {
@@ -1786,7 +1895,7 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
   align-items: stretch;
 }
 @media (min-width: 769px) {
-  /* 靠上對齊：若與長條圖並列，折線卡片不會在「整列高度」裡垂直置中，外側上下不留大塊空 */
+  /* 桌機並列：勿 stretch，避免左右互相撐高 */
   .complaints-charts {
     align-items: flex-start;
   }
@@ -1878,14 +1987,31 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
   justify-content: flex-start;
 }
 @media (min-width: 769px) {
-  /* 高度交給 Chart 依 aspectRatio 計算，勿強制 min-height，否則圖例下方易多出一段空白 */
+  /* 桌機：右邊高度跟著左邊，圖表填滿卡片 */
+  .complaints-charts .compl-chart-card.complaint-line-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    align-self: stretch;
+  }
+  .complaints-charts .compl-chart-card.complaint-line-card .complaint-trend-host {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+  }
   .complaints-charts .compl-chart-card.complaint-line-card .complaint-trend-host canvas {
-    max-height: 260px;
+    max-height: none !important;
+    width: 100% !important;
+    height: 100% !important;
   }
 }
 @media (max-width: 768px) {
   .complaint-trend-host {
     min-height: 0;
+  }
+  /* 手機：客訴線形圖可用兩指上下調高度 */
+  .complaints-charts .compl-chart-card.complaint-line-card {
+    touch-action: pan-y;
   }
 }
 #complaintsTableWrap {
@@ -1910,6 +2036,13 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
 }
 #complaintsTable th.sortable.active .si {
   color: #38bdf8;
+}
+/* 桌機：日期欄不換行（避免 2026-02- 與 01 拆兩行） */
+@media (min-width: 769px) {
+  #complaintsTable th:first-child,
+  #complaintsTable td:first-child {
+    white-space: nowrap;
+  }
 }
 
 #dataTable th.sortable {
@@ -2476,6 +2609,9 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
         allRooms: "全部房號",
         subject: "主題",
         allSubjects: "全部主題",
+        searchRoom: "搜尋房號…",
+        searchSubject: "搜尋主題…",
+        searchNoMatch: "無符合項目（Enter 用關鍵字篩選）",
         hideNo: "隱藏「無客訴」列",
         byRoom: "客訴：同房型的件數（堆疊主題）",
         byMonthTrend: "客訴：每月件數趨勢",
@@ -2580,6 +2716,9 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
         allRooms: "All rooms",
         subject: "Subject",
         allSubjects: "All subjects",
+        searchRoom: "Search room…",
+        searchSubject: "Search subject…",
+        searchNoMatch: "No match (Enter = keyword filter)",
         hideNo: "Hide \"no complaint\" rows",
         byRoom: "Real complaints per room (stacked by subject)",
         byMonthTrend: "Real complaints: monthly trend",
@@ -2682,6 +2821,9 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
         allRooms: "Semua kamar",
         subject: "Subjek",
         allSubjects: "Semua subjek",
+        searchRoom: "Cari kamar…",
+        searchSubject: "Cari subjek…",
+        searchNoMatch: "Tidak cocok (Enter = filter kata kunci)",
         hideNo: "Sembunyikan baris tanpa komplain",
         byRoom: "Komplain per kamar (bertumpuk subjek)",
         byMonthTrend: "Komplain nyata: tren bulanan",
@@ -2799,6 +2941,7 @@ function updateLangUI(){
       if (sf) sf.setAttribute("aria-label", C.subject || "");
       if (rfT) rfT.setAttribute("aria-label", C.room || "");
       if (sfT) sfT.setAttribute("aria-label", C.subject || "");
+      try { refreshAllComplaintCombos(); } catch (eRc) {}
       const lh = document.getElementById("lblComplaintHideNo");
       if (lh) lh.textContent = C.hideNo || "";
       const tr = document.getElementById("titleComplaintByRoom");
@@ -3281,6 +3424,135 @@ function updateLangUI(){
         applyTrendCardCustomHeight();
       }
     } catch (e) {}
+  }
+
+  /** 手機：客訴線形圖兩指調高後套用高度 */
+  function applyComplaintTrendCardCustomHeight() {
+    const card = document.querySelector(".complaint-line-card");
+    const host = document.getElementById("complaintTrendHost");
+    if (!card || !host) return;
+    const desktop =
+      typeof isDesktopChartsLayout === "function" &&
+      isDesktopChartsLayout() &&
+      !(typeof isMobileLandscapeCharts === "function" && isMobileLandscapeCharts());
+    if (desktop) {
+      window._complaintTrendCustomHeight = 0;
+      try { scheduleSyncComplaintLineHeightToBar(); } catch (eSync) {}
+      return;
+    }
+    if (typeof complaintTrendChart === "undefined" || !complaintTrendChart) return;
+    const h = Number(window._complaintTrendCustomHeight) || 0;
+    if (!h || h < 80) {
+      card.style.minHeight = "";
+      card.style.height = "";
+      host.style.height = "";
+      host.style.minHeight = "";
+      return;
+    }
+    const useH = Math.max(80, h);
+    window._complaintTrendCustomHeight = useH;
+    const titles = card.querySelector(".complaint-line-titles");
+    const titlesH = titles ? titles.offsetHeight : 36;
+    const w = Math.max(120, host.clientWidth || card.clientWidth || 300);
+    const chartH = Math.max(40, useH - titlesH - 12);
+    card.style.minHeight = useH + "px";
+    card.style.height = "";
+    host.style.minHeight = chartH + "px";
+    host.style.height = chartH + "px";
+    try {
+      complaintTrendChart.options.maintainAspectRatio = true;
+      complaintTrendChart.options.aspectRatio = Math.max(0.15, w / chartH);
+      complaintTrendChart.resize();
+    } catch (e) {}
+  }
+
+  /** 桌機：右邊線形圖高度跟著左邊長條圖（一樣高；避免互相撐高無限變長） */
+  function syncComplaintLineHeightToBar() {
+    if (window._complaintLineSyncLock) return false;
+    var desktop = false;
+    try {
+      desktop = !!(window.matchMedia && window.matchMedia("(min-width: 769px)").matches);
+    } catch (e0) {
+      desktop = false;
+    }
+    if (!desktop) return false;
+
+    const barCard = document.getElementById("complaintBarCard");
+    const barHost = document.getElementById("complaintBarHost");
+    const lineCard = document.querySelector(".complaint-line-card");
+    const host = document.getElementById("complaintTrendHost");
+    if (!barCard || !barHost || !lineCard || !host) return false;
+    if (typeof complaintTrendChart === "undefined" || !complaintTrendChart) return false;
+
+    // 只量左邊長條圖本體高度，不要量被右邊撐開後的整張卡
+    var hostH = parseInt(barHost.style.height, 10);
+    if (!hostH || hostH < 80) hostH = Math.round(barHost.offsetHeight || 0);
+    if (hostH < 80) return false;
+    var barTitle = barCard.querySelector("h3");
+    var barTitleH = barTitle ? barTitle.offsetHeight : 0;
+    var barH = Math.round(hostH + barTitleH + 20);
+    var cap = Math.max(400, Math.floor((window.innerHeight || 800) * 0.85));
+    if (barH > cap) barH = cap;
+
+    if (window._complaintLineLastH && Math.abs(window._complaintLineLastH - barH) < 2) {
+      return true;
+    }
+
+    window._complaintLineSyncLock = true;
+    window._complaintLineLastH = barH;
+    try {
+      lineCard.style.boxSizing = "border-box";
+      lineCard.style.minHeight = barH + "px";
+      lineCard.style.height = barH + "px";
+      lineCard.style.maxHeight = barH + "px";
+      lineCard.style.overflow = "hidden";
+
+      const titles = lineCard.querySelector(".complaint-line-titles");
+      const titlesH = titles ? titles.offsetHeight : 40;
+      const chartH = Math.max(80, barH - titlesH - 20);
+      host.style.boxSizing = "border-box";
+      host.style.minHeight = chartH + "px";
+      host.style.height = chartH + "px";
+      host.style.maxHeight = chartH + "px";
+
+      complaintTrendChart.options.maintainAspectRatio = false;
+      const canvas = complaintTrendChart.canvas;
+      if (canvas) {
+        canvas.style.width = "100%";
+        canvas.style.height = chartH + "px";
+        canvas.style.maxHeight = chartH + "px";
+      }
+      complaintTrendChart.resize();
+      return true;
+    } catch (e1) {
+      return false;
+    } finally {
+      setTimeout(function () {
+        window._complaintLineSyncLock = false;
+      }, 80);
+    }
+  }
+
+  function scheduleSyncComplaintLineHeightToBar() {
+    window._complaintLineLastH = 0;
+    [0, 80, 250].forEach(function (ms) {
+      setTimeout(function () {
+        try { syncComplaintLineHeightToBar(); } catch (e) {}
+      }, ms);
+    });
+  }
+
+  function setupComplaintLineHeightSyncObserver() {
+    if (window._complaintLineHObs || typeof ResizeObserver !== "function") return;
+    const barHost = document.getElementById("complaintBarHost");
+    if (!barHost) return;
+    window._complaintLineHObs = new ResizeObserver(function () {
+      if (window._complaintLineSyncLock) return;
+      window._complaintLineLastH = 0;
+      try { syncComplaintLineHeightToBar(); } catch (e) {}
+    });
+    // 只觀察左邊圖本體，避免被右邊高度回寫造成一直變長
+    window._complaintLineHObs.observe(barHost);
   }
 
   function updatePieCollapseButtonUI() {
@@ -4419,6 +4691,178 @@ function updateLangUI(){
     syncLangUIFromSelect();
   }
 
+  function getComplaintLangPack() {
+    return (LANGS[currentLang] && LANGS[currentLang].complaints) || {};
+  }
+
+  /** 房號／主題下拉：可搜尋 + 關鍵字篩選 */
+  function upgradeComplaintCombo(sel, kind) {
+    if (!sel || sel._comboUpgraded) return;
+    const parent = sel.parentNode;
+    if (!parent) return;
+    const wrap = document.createElement("div");
+    wrap.className = "complaint-combo";
+    parent.insertBefore(wrap, sel);
+    wrap.appendChild(sel);
+    sel.classList.add("complaint-combo-native");
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "complaint-combo-btn";
+    const panel = document.createElement("div");
+    panel.className = "complaint-combo-panel";
+    const search = document.createElement("input");
+    search.type = "search";
+    search.className = "complaint-combo-search";
+    search.autocomplete = "off";
+    const list = document.createElement("div");
+    list.className = "complaint-combo-list";
+    panel.appendChild(search);
+    panel.appendChild(list);
+    wrap.appendChild(btn);
+    wrap.appendChild(panel);
+
+    function clearKeyword() {
+      if (kind === "room") window._complaintRoomKeyword = "";
+      else window._complaintSubjectKeyword = "";
+    }
+    function setKeyword(q) {
+      if (kind === "room") window._complaintRoomKeyword = q;
+      else window._complaintSubjectKeyword = q;
+    }
+    function keywordNow() {
+      return kind === "room"
+        ? String(window._complaintRoomKeyword || "")
+        : String(window._complaintSubjectKeyword || "");
+    }
+    function syncBtn() {
+      const C = getComplaintLangPack();
+      search.placeholder =
+        kind === "room"
+          ? (C.searchRoom || "Search…")
+          : (C.searchSubject || "Search…");
+      const kw = keywordNow();
+      if (kw) {
+        btn.textContent = "🔍 " + kw;
+        return;
+      }
+      const opt = sel.options[sel.selectedIndex];
+      btn.textContent = opt ? opt.textContent : (kind === "room" ? (C.allRooms || "All") : (C.allSubjects || "All"));
+    }
+    function rebuildList(filter) {
+      const C = getComplaintLangPack();
+      list.innerHTML = "";
+      const q = String(filter || "").trim().toLowerCase();
+      let n = 0;
+      Array.from(sel.options).forEach(function (o) {
+        const t = String(o.textContent || "");
+        const v = String(o.value || "");
+        if (q && t.toLowerCase().indexOf(q) < 0 && v.toLowerCase().indexOf(q) < 0) return;
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "complaint-combo-item";
+        if (o.value === sel.value && !keywordNow()) item.classList.add("active");
+        item.textContent = t;
+        item.addEventListener("click", function (e) {
+          if (e) e.stopPropagation();
+          clearKeyword();
+          sel.value = o.value;
+          sel.dispatchEvent(new Event("change", { bubbles: true }));
+          syncBtn();
+          wrap.classList.remove("open");
+          search.value = "";
+        });
+        list.appendChild(item);
+        n++;
+      });
+      if (!n) {
+        const empty = document.createElement("div");
+        empty.className = "complaint-combo-empty";
+        empty.textContent = C.searchNoMatch || "No match";
+        list.appendChild(empty);
+      }
+    }
+    function openPanel() {
+      document.querySelectorAll(".complaint-combo.open").forEach(function (el) {
+        if (el !== wrap) el.classList.remove("open");
+      });
+      wrap.classList.add("open");
+      rebuildList(search.value);
+      setTimeout(function () {
+        try { search.focus(); search.select(); } catch (e) {}
+      }, 0);
+    }
+    function closePanel() {
+      wrap.classList.remove("open");
+      search.value = "";
+    }
+
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (wrap.classList.contains("open")) closePanel();
+      else openPanel();
+    });
+    search.addEventListener("click", function (e) { e.stopPropagation(); });
+    search.addEventListener("input", function () {
+      rebuildList(search.value);
+    });
+    search.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        closePanel();
+        return;
+      }
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      const q = String(search.value || "").trim();
+      if (!q) {
+        clearKeyword();
+        sel.value = "";
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+        syncBtn();
+        closePanel();
+        return;
+      }
+      const hit = Array.from(sel.options).find(function (o) {
+        return o.value === q || String(o.textContent) === q;
+      });
+      if (hit) {
+        clearKeyword();
+        sel.value = hit.value;
+      } else {
+        setKeyword(q);
+        sel.value = "";
+      }
+      sel.dispatchEvent(new Event("change", { bubbles: true }));
+      syncBtn();
+      closePanel();
+    });
+
+    sel._comboUpgraded = true;
+    sel._comboSyncBtn = syncBtn;
+    sel._comboRebuild = function () {
+      rebuildList(search.value);
+      syncBtn();
+    };
+    syncBtn();
+  }
+
+  function refreshAllComplaintCombos() {
+    ["complaintRoomFilter", "complaintRoomFilterTable", "complaintSubjectFilter", "complaintSubjectFilterTable"].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el && typeof el._comboRebuild === "function") el._comboRebuild();
+    });
+  }
+
+  function setupComplaintComboDocClose() {
+    if (window._complaintComboDocBound) return;
+    document.addEventListener("click", function () {
+      document.querySelectorAll(".complaint-combo.open").forEach(function (el) {
+        el.classList.remove("open");
+      });
+    });
+    window._complaintComboDocBound = true;
+  }
+
   function renderComplaints() {
     const L = LANGS[currentLang];
     const C = L.complaints || {};
@@ -4439,6 +4883,14 @@ function updateLangUI(){
     const sec = document.getElementById("complaintsSection");
 
     if (!roomSel || !theadC || !tbodyC) return;
+
+    try {
+      upgradeComplaintCombo(document.getElementById("complaintRoomFilter"), "room");
+      upgradeComplaintCombo(document.getElementById("complaintRoomFilterTable"), "room");
+      upgradeComplaintCombo(document.getElementById("complaintSubjectFilter"), "subject");
+      upgradeComplaintCombo(document.getElementById("complaintSubjectFilterTable"), "subject");
+      setupComplaintComboDocClose();
+    } catch (eUp0) {}
 
     const chartRow = document.getElementById("complaintsChartsRow");
     const toolBar = document.getElementById("complaintsToolbarTop");
@@ -4526,16 +4978,23 @@ function updateLangUI(){
       subjSelTable.innerHTML = subjSel.innerHTML;
       subjSelTable.value = subjSel.value;
     }
+    try { refreshAllComplaintCombos(); } catch (eCombo) {}
 
     const roomFilter = roomSel.value;
     const subjectFilter = subjSel ? subjSel.value : "";
+    const roomKw = String(window._complaintRoomKeyword || "").trim().toLowerCase();
+    const subjectKw = String(window._complaintSubjectKeyword || "").trim().toLowerCase();
     const hideNoRows = hideNo && hideNo.checked;
     const baseRows = [];
     for (let i = 0; i < COMPLAINTS_RAW.length; i++) {
       const row = COMPLAINTS_RAW[i];
       if (!complaintMatchesPeriod(row)) continue;
-      if (roomFilter && complaintRoomStr(row) !== roomFilter) continue;
-      if (subjectFilter && complaintSubjectStr(row) !== subjectFilter) continue;
+      const rm = complaintRoomStr(row);
+      const sj = complaintSubjectStr(row);
+      if (roomFilter && rm !== roomFilter) continue;
+      if (!roomFilter && roomKw && String(rm).toLowerCase().indexOf(roomKw) < 0) continue;
+      if (subjectFilter && sj !== subjectFilter) continue;
+      if (!subjectFilter && subjectKw && String(sj).toLowerCase().indexOf(subjectKw) < 0) continue;
       if (hideNoRows && isNoComplaintRow(row)) continue;
       baseRows.push(row);
     }
@@ -4578,8 +5037,12 @@ function updateLangUI(){
       const row = COMPLAINTS_RAW[ri];
       if (!complaintMatchesPeriod(row)) continue;
       if (isNoComplaintRow(row)) continue;
-      if (roomFilter && complaintRoomStr(row) !== roomFilter) continue;
-      if (subjectFilter && complaintSubjectStr(row) !== subjectFilter) continue;
+      const rmC = complaintRoomStr(row);
+      const sjC = complaintSubjectStr(row);
+      if (roomFilter && rmC !== roomFilter) continue;
+      if (!roomFilter && roomKw && String(rmC).toLowerCase().indexOf(roomKw) < 0) continue;
+      if (subjectFilter && sjC !== subjectFilter) continue;
+      if (!subjectFilter && subjectKw && String(sjC).toLowerCase().indexOf(subjectKw) < 0) continue;
       realForChartsBase.push(row);
     }
     const baseRoomCount = {};
@@ -5089,6 +5552,8 @@ function updateLangUI(){
         }
       } else {
         mountComplaintBarChart();
+        try { scheduleSyncComplaintLineHeightToBar(); } catch (eBarSync) {}
+        try { setupComplaintLineHeightSyncObserver(); } catch (eObs2) {}
       }
     } else if (barCanvas && complaintBarChart === null) {
       var barVpClear = document.getElementById("complaintBarViewport");
@@ -5270,9 +5735,15 @@ function updateLangUI(){
             }
           }
         });
+        try { applyComplaintTrendCardCustomHeight(); } catch (eCtH) {}
+        try { scheduleSyncComplaintLineHeightToBar(); } catch (eSync2) {}
+        try { setupComplaintLineHeightSyncObserver(); } catch (eObs) {}
       } else {
         var trendHostClear = document.getElementById("complaintTrendHost");
-        if (trendHostClear) trendHostClear.style.height = "";
+        if (trendHostClear) {
+          trendHostClear.style.height = "";
+          trendHostClear.style.minHeight = "";
+        }
         const ctx = trendCanvas.getContext("2d");
         if (ctx) ctx.clearRect(0, 0, trendCanvas.width, trendCanvas.height);
       }
@@ -5287,6 +5758,12 @@ function updateLangUI(){
         try {
           if (complaintTrendChart) complaintTrendChart.resize();
         } catch (e) {}
+        try {
+          applyComplaintTrendCardCustomHeight();
+        } catch (eH) {}
+        try {
+          scheduleSyncComplaintLineHeightToBar();
+        } catch (eS) {}
       }
       if (typeof requestAnimationFrame === "function") {
         requestAnimationFrame(function () {
@@ -5888,13 +6365,24 @@ function updateLangUI(){
       const cRmMaxEl = document.getElementById("complaintRoomMax");
       const cCtMinEl = document.getElementById("complaintCountMin");
       const cCtMaxEl = document.getElementById("complaintCountMax");
+      try {
+        upgradeComplaintCombo(cr, "room");
+        upgradeComplaintCombo(crT, "room");
+        upgradeComplaintCombo(cs, "subject");
+        upgradeComplaintCombo(csT, "subject");
+        setupComplaintComboDocClose();
+      } catch (eUp) {}
       if (cr && crT) {
         cr.addEventListener("change", function () {
           crT.value = cr.value;
+          if (typeof crT._comboSyncBtn === "function") crT._comboSyncBtn();
+          if (typeof cr._comboSyncBtn === "function") cr._comboSyncBtn();
           renderComplaints();
         });
         crT.addEventListener("change", function () {
           cr.value = crT.value;
+          if (typeof cr._comboSyncBtn === "function") cr._comboSyncBtn();
+          if (typeof crT._comboSyncBtn === "function") crT._comboSyncBtn();
           renderComplaints();
         });
       } else {
@@ -5904,10 +6392,14 @@ function updateLangUI(){
       if (cs && csT) {
         cs.addEventListener("change", function () {
           csT.value = cs.value;
+          if (typeof csT._comboSyncBtn === "function") csT._comboSyncBtn();
+          if (typeof cs._comboSyncBtn === "function") cs._comboSyncBtn();
           renderComplaints();
         });
         csT.addEventListener("change", function () {
           cs.value = csT.value;
+          if (typeof cs._comboSyncBtn === "function") cs._comboSyncBtn();
+          if (typeof csT._comboSyncBtn === "function") csT._comboSyncBtn();
           renderComplaints();
         });
       } else {
@@ -6273,6 +6765,58 @@ function updateLangUI(){
       }
     }, { passive: true });
   }
+
+  // 手機版客訴線形圖：兩指上下滑調高度（單指不調，避免跟頁面捲動衝突）
+  (function setupComplaintTrendPinchResize() {
+    const card = document.querySelector(".complaint-line-card");
+    if (!card || card._complaintPinchBound) return;
+    let pinchResize = false;
+    let startCardH = 0;
+    let pinchStartMidY = 0;
+
+    function touchMidY(touches) {
+      if (!touches || touches.length < 2) return 0;
+      return (touches[0].clientY + touches[1].clientY) / 2;
+    }
+
+    card.addEventListener("touchstart", function (e) {
+      const n = e.touches ? e.touches.length : 0;
+      if (n >= 2) {
+        pinchResize = true;
+        pinchStartMidY = touchMidY(e.touches);
+        startCardH = Math.max(
+          80,
+          Number(window._complaintTrendCustomHeight) || Math.round(card.getBoundingClientRect().height || 0)
+        );
+      } else {
+        pinchResize = false;
+      }
+    }, { passive: true });
+
+    card.addEventListener("touchmove", function (e) {
+      const n = e.touches ? e.touches.length : 0;
+      if (n < 2) return;
+      if (!pinchResize) {
+        pinchResize = true;
+        pinchStartMidY = touchMidY(e.touches);
+        startCardH = Math.max(
+          80,
+          Number(window._complaintTrendCustomHeight) || Math.round(card.getBoundingClientRect().height || 0)
+        );
+      }
+      const midY = touchMidY(e.touches);
+      const dy = midY - pinchStartMidY;
+      window._complaintTrendCustomHeight = Math.max(80, startCardH + dy);
+      applyComplaintTrendCardCustomHeight();
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+
+    card.addEventListener("touchend", function (e) {
+      if (!e.touches || e.touches.length < 2) pinchResize = false;
+    }, { passive: true });
+
+    card._complaintPinchBound = true;
+  })();
 
   // 每 30 分鐘自動更新匯率
   setInterval(updateRates, 30*60*1000);

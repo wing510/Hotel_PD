@@ -410,13 +410,13 @@ td.num, th.num {
   text-align: center;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #9ca3af;
+  color: #e2e8f0;
 }
 
 .chart-subtitle{
   margin: 0;
   font-size: 12px;
-  color: rgba(148,163,184,0.95);
+  color: #cbd5e1;
   line-height: 1.2;
   white-space: normal;
   text-align: center;
@@ -523,7 +523,9 @@ td.num, th.num {
   box-shadow: 0 18px 40px rgba(15,23,42,0.9);
 }
 .dropdown-content label {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 6px 10px;
   cursor: pointer;
   color: #e5e7eb;
@@ -531,9 +533,20 @@ td.num, th.num {
 .dropdown-content label:hover {
   background: rgba(148,163,184,0.16);
 }
+.dropdown-content .swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  margin-left: auto; /* 名稱右邊顯示顏色 */
+  border: 1px solid rgba(255,255,255,0.25);
+  box-shadow: 0 0 0 1px rgba(15,23,42,0.35);
+}
 
     .dropdown-content label {
-      display: block;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       padding: 4px 8px;
       cursor: pointer;
     }
@@ -557,6 +570,8 @@ td.num, th.num {
       display: flex;
       flex-direction: column;
       gap: 8px;
+      width: 100%;
+      box-sizing: border-box;
     }
     .period-row.period-year-row {
       display: grid;
@@ -564,11 +579,20 @@ td.num, th.num {
       gap: 8px;
     }
     .period-row label {
-      display: flex !important;
+      display: grid !important;
+      grid-template-columns: 3.25em minmax(0, 1fr);
       align-items: center;
-      flex-wrap: wrap;
-      gap: 6px;
+      gap: 8px;
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      padding: 0 !important; /* 不要吃到 .dropdown-content label 的內距，才能左緣對齊 */
       font-size: 12px;
+      box-sizing: border-box;
+    }
+    .period-row label > span {
+      text-align: left;
+      white-space: nowrap;
     }
     .period-row input[type="month"] {
       color: #e5e7eb;
@@ -577,6 +601,10 @@ td.num, th.num {
       border-radius: 8px;
       padding: 5px 8px;
       font-size: 12px;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
     }
     .period-row input[type="number"] {
       color: #e5e7eb;
@@ -1061,12 +1089,23 @@ td.num, th.num {
   gap: 8px;
   margin-bottom: 8px;
 }
+.chart-right .chart-header {
+  justify-content: center;
+  position: relative;
+}
 
 .chart-titles{
   min-width: 0;
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+.chart-right .chart-titles {
+  padding: 0 88px; /* 預留右側年月／全螢幕鈕，視覺仍置中 */
 }
 
 .chart-titles h2{
@@ -1077,27 +1116,32 @@ td.num, th.num {
 /* 手機橫屏：標題 + 期間 + 圖例同一行靠左 */
 .trend-legend-html {
   display: none;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   min-width: 0;
   overflow: hidden;
+  width: 100%;
 }
 .trend-legend-html .tl-item {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-size: 10px;
-  color: #94a3b8;
+  color: #f1f5f9;
   white-space: nowrap;
   flex: 0 0 auto;
 }
 .trend-legend-html .tl-item i {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
   display: inline-block;
   flex: 0 0 auto;
+  border: 1px solid rgba(255,255,255,0.25);
+  box-shadow: 0 0 0 1px rgba(15,23,42,0.35);
+  box-sizing: border-box;
 }
 /* 手機橫屏：寬度常 >768（如 915/1206），勿套桌機篩選列；強制手機殼（☰＋側欄） */
 @media (orientation: landscape) and (max-height: 600px),
@@ -1111,7 +1155,7 @@ td.num, th.num {
     padding-top: 8px;
     padding-bottom: 8px;
     padding-left: max(12px, calc(env(safe-area-inset-left, 0px) + 8px));
-    padding-right: max(48px, calc(env(safe-area-inset-right, 0px) + 16px));
+    padding-right: max(40px, calc(env(safe-area-inset-right, 0px) + 16px));
     max-width: 100%;
     box-sizing: border-box;
   }
@@ -1276,17 +1320,23 @@ td.num, th.num {
   }
   .chart-right .chart-header {
     align-items: center;
+    justify-content: flex-start;
     gap: 6px;
     margin-bottom: 4px;
     min-width: 0;
     max-width: 100%;
+    position: relative;
   }
   .chart-right .chart-nav {
     flex: 0 0 auto;
-    /* 年月／全螢幕列再多一點右邊距，避免貼到系統鍵 */
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
     margin-right: 4px;
     padding-right: max(4px, env(safe-area-inset-right, 0px));
   }
+  /* 橫屏：標題、期間、圖例同一行靠左 */
   .chart-right .chart-titles {
     display: flex;
     flex-direction: row;
@@ -1296,6 +1346,9 @@ td.num, th.num {
     gap: 8px 10px;
     min-width: 0;
     text-align: left;
+    width: 100%;
+    padding: 0 100px 0 0; /* 只預留右側按鈕，內容靠左 */
+    box-sizing: border-box;
   }
   .chart-right .chart-titles h2 {
     margin: 0 !important;
@@ -1310,11 +1363,17 @@ td.num, th.num {
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
+    max-width: none;
+    flex: 0 1 auto;
     text-align: left !important;
   }
   .chart-right .trend-legend-html:not([hidden]) {
     display: inline-flex;
     flex: 1 1 auto;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    width: auto;
+    overflow: hidden;
   }
   .complaint-line-titles {
     display: flex;
@@ -1324,10 +1383,12 @@ td.num, th.num {
     justify-content: flex-start;
     gap: 6px 10px;
     min-width: 0;
+    text-align: left;
   }
   .complaint-line-titles h3 {
     margin: 0 !important;
     white-space: nowrap;
+    text-align: left !important;
   }
   .complaint-line-titles .chart-subtitle {
     margin: 0 !important;
@@ -1336,6 +1397,7 @@ td.num, th.num {
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
+    text-align: left !important;
   }
 }
 
@@ -1343,6 +1405,13 @@ td.num, th.num {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+.chart-right .chart-nav {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
 }
 
 .mode-toggle {
@@ -1417,21 +1486,24 @@ td.num, th.num {
   padding-top: max(8px, env(safe-area-inset-top, 0px)) !important;
   padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
   padding-left: max(12px, calc(env(safe-area-inset-left, 0px) + 8px)) !important;
-  padding-right: max(48px, calc(env(safe-area-inset-right, 0px) + 16px)) !important;
+  padding-right: max(40px, calc(env(safe-area-inset-right, 0px) + 16px)) !important;
   order: 0 !important;
   box-sizing: border-box !important;
   display: flex !important;
   flex-direction: column !important;
+  justify-content: flex-start !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
 }
 .chart-right.trend-fs .chart-header {
   flex: 0 0 auto;
 }
 .chart-right.trend-fs > canvas {
-  flex: 1 1 auto !important;
+  flex: 0 0 auto !important;
   width: 100% !important;
   min-height: 0 !important;
   max-height: none !important;
-  height: 100% !important;
+  height: auto !important;
 }
 body.trend-fs-open {
   overflow: hidden !important;
@@ -1613,7 +1685,7 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
   text-align: center;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #9ca3af;
+  color: #e2e8f0;
 }
 .complaint-line-titles .chart-subtitle {
   margin-bottom: 6px;
@@ -2676,6 +2748,10 @@ function updateLangUI(){
     "Banquet": "#F78FB3",      // 宴會收入 → 粉紅
     "Laundry": "#9B59B6"       // 洗衣收入 → 紫色
   };
+  const INDICATOR_COLORS = {
+    OccRate: "#3d3d3d",  // 住房率%
+    AvgRate: "#b3b3b3"   // 平均房價
+  };
 
   // ===== 全域變數 =====
   let RAW = [];
@@ -2878,9 +2954,10 @@ function updateLangUI(){
   // ===== 收入多選清單（checkbox） =====
   function initMetricList(){
     const opts = LANGS[currentLang].metricOpts; // 只放金額型指標
-    metricList.innerHTML = opts.map(opt =>
-      `<label><input type="checkbox" value="${opt.val}"> ${opt.text}</label>`
-    ).join('');
+    metricList.innerHTML = opts.map(opt => {
+      const color = COLORS[opt.val] || "#94a3b8";
+      return `<label><input type="checkbox" value="${opt.val}"> <span>${opt.text}</span><i class="swatch" style="background:${color}" aria-hidden="true"></i></label>`;
+    }).join('');
 
     // 預設勾「總收入」「房務」
     ['Total','Room Revenue'].forEach(v=>{
@@ -2932,10 +3009,10 @@ function updateLangUI(){
     const occText = (LANGS[currentLang].table.occ || "Occ%");
     const arrText = (LANGS[currentLang].table.arr || "Avg Rate");
 
-    // 只有兩個選項：OccRate / AvgRate
+    // 只有兩個選項：OccRate / AvgRate（名稱右邊顯示對應線色）
     indList.innerHTML = [
-      `<label><input type="checkbox" value="OccRate"> ${occText}</label>`,
-      `<label><input type="checkbox" value="AvgRate"> ${arrText}</label>`
+      `<label><input type="checkbox" value="OccRate"> <span>${occText}</span><i class="swatch" style="background:${INDICATOR_COLORS.OccRate}" aria-hidden="true"></i></label>`,
+      `<label><input type="checkbox" value="AvgRate"> <span>${arrText}</span><i class="swatch" style="background:${INDICATOR_COLORS.AvgRate}" aria-hidden="true"></i></label>`
     ].join('');
 
     // 預設兩個都勾
@@ -3005,6 +3082,9 @@ function updateLangUI(){
       try {
         applyTrendCardCustomHeight();
       } catch (e2) {}
+      try {
+        applyDesktopTrendHeightLock();
+      } catch (e3) {}
     }
     if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(function () {
@@ -3017,40 +3097,31 @@ function updateLangUI(){
     }
   }
 
-  /** 單指上下拖後記住的折線卡片高度；套用到 aspectRatio（全螢幕改填滿剩餘高度） */
+  /** 兩指上下滑記住的折線卡片高度；橫屏／全螢幕皆不設高度上限 */
   function applyTrendCardCustomHeight() {
     const card = document.querySelector(".chart-right");
     if (!card || typeof trendChart === "undefined" || !trendChart) return;
     const isFs = card.classList.contains("trend-fs");
-
-    // 全螢幕：取消比例限制，讓 canvas 吃滿剩餘空間
-    if (isFs) {
-      card.style.minHeight = "";
-      window._trendCardCustomHeight = Math.floor(window.innerHeight || 0);
-      try {
-        trendChart.options.maintainAspectRatio = false;
-        trendChart.options.aspectRatio = undefined;
-        trendChart.resize();
-      } catch (e) {}
-      return;
-    }
-
     const h = Number(window._trendCardCustomHeight) || 0;
-    if (!h || h < 160) {
-      card.style.minHeight = "";
+    if (!h || h < 80) {
+      if (!isFs) card.style.minHeight = "";
       return;
     }
-    const maxH = Math.max(220, Math.floor(window.innerHeight * 0.92));
-    const useH = Math.min(Math.max(160, h), maxH);
+    // 不設 max；僅避免高度小到圖表崩潰
+    const useH = Math.max(80, h);
     window._trendCardCustomHeight = useH;
     const header = card.querySelector(".chart-header");
     const headerH = header ? header.offsetHeight : 40;
     const w = Math.max(120, card.clientWidth || 300);
-    const chartH = Math.max(120, useH - headerH - 20);
-    card.style.minHeight = useH + "px";
+    const chartH = Math.max(40, useH - headerH - (isFs ? 16 : 20));
+    if (!isFs) {
+      card.style.minHeight = useH + "px";
+    } else {
+      card.style.minHeight = "";
+    }
     try {
       trendChart.options.maintainAspectRatio = true;
-      trendChart.options.aspectRatio = Math.max(0.45, w / chartH);
+      trendChart.options.aspectRatio = Math.max(0.15, w / chartH);
       trendChart.resize();
     } catch (e) {}
   }
@@ -3059,13 +3130,12 @@ function updateLangUI(){
     const card = document.querySelector(".chart-right");
     if (!card || typeof trendChart === "undefined" || !trendChart) return;
     try {
-      // 離開全螢幕：恢復可拖高度／比例模式
       const isMobileLandscape =
         typeof window.matchMedia === "function" &&
         window.matchMedia("(orientation: landscape) and (max-height: 600px), (max-width: 900px) and (orientation: landscape)").matches;
       const isMobile = window.matchMedia("(max-width: 768px)").matches || isMobileLandscape;
       trendChart.options.maintainAspectRatio = true;
-      if (!window._trendCardCustomHeight || window._trendCardCustomHeight < 160) {
+      if (!window._trendCardCustomHeight || window._trendCardCustomHeight < 80) {
         trendChart.options.aspectRatio = isMobileLandscape ? 2.4 : (isMobile ? 1.2 : 2);
         card.style.minHeight = "";
         trendChart.resize();
@@ -3098,13 +3168,85 @@ function updateLangUI(){
     }
   }
 
+  function isDesktopChartsLayout() {
+    try {
+      return !!(window.matchMedia && window.matchMedia("(min-width: 769px)").matches);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /** 桌機收合圓餅後：折線只變寬、高度維持收合前 */
+  function applyDesktopTrendHeightLock() {
+    if (!isDesktopChartsLayout()) return false;
+    const charts = document.querySelector(".charts");
+    const card = document.querySelector(".chart-right");
+    if (!charts || !card || typeof trendChart === "undefined" || !trendChart) return false;
+    if (!charts.classList.contains("pie-collapsed")) return false;
+    const lockH = Number(window._trendDesktopLockHeight) || 0;
+    if (lockH < 40) return false;
+    const w = Math.max(120, card.clientWidth || 300);
+    try {
+      trendChart.options.maintainAspectRatio = true;
+      trendChart.options.aspectRatio = w / lockH;
+      trendChart.resize();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function clearDesktopTrendHeightLock() {
+    window._trendDesktopLockHeight = 0;
+  }
+
   function setPieCollapsed(collapsed, opts) {
     const charts = document.querySelector(".charts");
     if (!charts) return;
     const want = !!collapsed;
+    const desktop = isDesktopChartsLayout();
+    let lockH = 0;
+
+    // 收合前先記下目前折線高度（桌機）
+    if (desktop && want && typeof trendChart !== "undefined" && trendChart && trendChart.canvas) {
+      lockH = Math.round(trendChart.canvas.clientHeight || 0);
+      if (lockH > 40) window._trendDesktopLockHeight = lockH;
+    }
+
     charts.classList.toggle("pie-collapsed", want);
     updatePieCollapseButtonUI();
-    if (!(opts && opts.skipResize)) bumpRevenueChartsSoon();
+    if (opts && opts.skipResize) return;
+
+    if (desktop) {
+      if (!want) {
+        clearDesktopTrendHeightLock();
+        try {
+          if (typeof trendChart !== "undefined" && trendChart) {
+            trendChart.options.maintainAspectRatio = true;
+            trendChart.options.aspectRatio = 2;
+            trendChart.resize();
+          }
+        } catch (e0) {}
+        bumpRevenueChartsSoon();
+        return;
+      }
+      // 收合：等寬度撐開後，用鎖定高度重算 aspectRatio
+      const apply = function () {
+        if (!applyDesktopTrendHeightLock()) bumpRevenueChartsSoon();
+      };
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(function () {
+          apply();
+          requestAnimationFrame(apply);
+        });
+      } else {
+        setTimeout(apply, 0);
+        setTimeout(apply, 120);
+      }
+      return;
+    }
+
+    bumpRevenueChartsSoon();
   }
 
   function applyPieCollapseDefaultByViewport(force) {
@@ -3493,7 +3635,7 @@ function updateLangUI(){
       }
       const labelI = (ind==="OccRate") ? (LANGS[currentLang].table.occ || "Occ%")
                                        : (LANGS[currentLang].table.arr || "Avg Rate");
-      const colorI = (ind==="OccRate") ? "#3d3d3d" : "#b3b3b3";  // 住房率%灰、平均房價深灰
+      const colorI = INDICATOR_COLORS[ind] || "#94a3b8";
       const yAxisID = (ind==="OccRate") ? "yPercent" : "yRight";
       datasets.push({
         label: labelI,
@@ -3566,12 +3708,30 @@ function updateLangUI(){
 
         plugins:{
           legend:{ 
-            /* 手機橫屏：圖例改到標題列 HTML，與標題/期間同一行 */
+            /* 手機橫屏：圖例改到標題列 HTML；其餘用 Chart.js 圖例（圓形色點比照下拉） */
             display: !isMobileLandscape,
             labels:{
               boxWidth: 10,
               boxHeight: 10,
-              font:{ size: legendFontPx }
+              color: "#f1f5f9",
+              font:{ size: legendFontPx },
+              usePointStyle: true,
+              pointStyle: "circle",
+              generateLabels: function (chart) {
+                const dsList = chart.data.datasets || [];
+                return dsList.map(function (ds, i) {
+                  const color = ds.borderColor || "#94a3b8";
+                  return {
+                    text: ds.label != null ? String(ds.label) : "",
+                    fillStyle: color,
+                    strokeStyle: "rgba(255,255,255,0.25)",
+                    lineWidth: 1,
+                    hidden: !chart.isDatasetVisible(i),
+                    datasetIndex: i,
+                    pointStyle: "circle"
+                  };
+                });
+              }
             }
           },
           tooltip:{
@@ -3698,6 +3858,7 @@ function updateLangUI(){
     });
     syncTrendHtmlLegend(datasets);
     applyTrendCardCustomHeight();
+    applyDesktopTrendHeightLock();
 
     // === 圓餅圖 ===
     let totals = COLS.reduce((o,c)=>(o[c.key]=0,o),{});
@@ -3720,7 +3881,12 @@ function updateLangUI(){
       type: "pie",
       data: { 
         labels: pieLabels, 
-        datasets: [{ data: pieData, backgroundColor: pieColors }] 
+        datasets: [{
+          data: pieData,
+          backgroundColor: pieColors,
+          borderColor: "#ffffff",
+          borderWidth: 1
+        }] 
       },
       options:{ 
         responsive: true, 
@@ -3740,7 +3906,31 @@ function updateLangUI(){
         plugins:{ 
           legend:{ 
             position:"right", 
-            labels:{ boxWidth:12, font:{size:12}, padding: 8 } 
+            labels:{
+              boxWidth: 12,
+              boxHeight: 12,
+              font:{ size:12 },
+              padding: 8,
+              color: "#f1f5f9",
+              // 圖例色塊外框跟扇形邊線一樣細
+              generateLabels: function (chart) {
+                const data = chart.data;
+                if (!data.labels || !data.labels.length) return [];
+                const ds = data.datasets[0] || {};
+                const bg = ds.backgroundColor || [];
+                const bw = typeof ds.borderWidth === "number" ? ds.borderWidth : 1;
+                return data.labels.map(function (label, i) {
+                  return {
+                    text: label,
+                    fillStyle: Array.isArray(bg) ? bg[i] : bg,
+                    strokeStyle: "#ffffff",
+                    lineWidth: bw,
+                    hidden: isNaN(ds.data[i]) || chart.getDataVisibility(i) === false,
+                    index: i
+                  };
+                });
+              }
+            }
           }
         } 
       }
@@ -5855,7 +6045,10 @@ function updateLangUI(){
         pinchResize = true;
         didPinchResize = false;
         pinchStartMidY = touchMidY(e.touches);
-        startCardH = Math.round(trendCard.getBoundingClientRect().height || 0);
+        startCardH = Math.max(
+          80,
+          Number(window._trendCardCustomHeight) || Math.round(trendCard.getBoundingClientRect().height || 0)
+        );
         return;
       }
       // 單指：只記左右滑，不調高度
@@ -5872,19 +6065,15 @@ function updateLangUI(){
         if (!pinchResize) {
           pinchResize = true;
           pinchStartMidY = touchMidY(e.touches);
-          startCardH = Math.round(trendCard.getBoundingClientRect().height || 0);
+          startCardH = Math.max(
+            80,
+            Number(window._trendCardCustomHeight) || Math.round(trendCard.getBoundingClientRect().height || 0)
+          );
         }
         const midY = touchMidY(e.touches);
         const dy = midY - pinchStartMidY;
-        // 兩指中點往下＝變高；全螢幕本來就拉滿，仍允許調整上限
-        const isFs = trendCard.classList.contains("trend-fs");
-        if (isFs) {
-          // 全螢幕維持填滿，不靠兩指改高度
-          if (e.cancelable) e.preventDefault();
-          return;
-        }
-        const maxH = Math.max(220, Math.floor(window.innerHeight * 0.92));
-        const nextH = Math.min(maxH, Math.max(160, startCardH + dy));
+        // 兩指中點往下＝變高；橫屏／全螢幕皆不設高度上限
+        const nextH = Math.max(80, startCardH + dy);
         window._trendCardCustomHeight = nextH;
         applyTrendCardCustomHeight();
         didPinchResize = true;

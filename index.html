@@ -2293,10 +2293,6 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
   .complaint-trend-host {
     min-height: 0;
   }
-  /* 手機：客訴線形圖可用兩指上下調高度 */
-  .complaints-charts .compl-chart-card.complaint-line-card {
-    touch-action: pan-y;
-  }
 }
 #complaintsTableWrap {
   overflow-x: auto;
@@ -3844,44 +3840,19 @@ function updateLangUI(){
     } catch (e) {}
   }
 
-  /** 手機：客訴線形圖兩指調高後套用高度 */
+  /** 客訴線形圖：不再支援兩指調高度；清除殘留自訂高度 */
   function applyComplaintTrendCardCustomHeight() {
+    window._complaintTrendCustomHeight = 0;
     const card = document.querySelector(".complaint-line-card");
     const host = document.getElementById("complaintTrendHost");
-    if (!card || !host) return;
-    const desktop =
-      typeof isDesktopChartsLayout === "function" &&
-      isDesktopChartsLayout() &&
-      !(typeof isMobileLandscapeCharts === "function" && isMobileLandscapeCharts());
-    if (desktop) {
-      window._complaintTrendCustomHeight = 0;
-      try { scheduleSyncComplaintLineHeightToBar(); } catch (eSync) {}
-      return;
-    }
-    if (typeof complaintTrendChart === "undefined" || !complaintTrendChart) return;
-    const h = Number(window._complaintTrendCustomHeight) || 0;
-    if (!h || h < 80) {
+    if (card) {
       card.style.minHeight = "";
       card.style.height = "";
+    }
+    if (host) {
       host.style.height = "";
       host.style.minHeight = "";
-      return;
     }
-    const useH = Math.max(80, h);
-    window._complaintTrendCustomHeight = useH;
-    const titles = card.querySelector(".complaint-line-titles");
-    const titlesH = titles ? titles.offsetHeight : 36;
-    const w = Math.max(120, host.clientWidth || card.clientWidth || 300);
-    const chartH = Math.max(40, useH - titlesH - 12);
-    card.style.minHeight = useH + "px";
-    card.style.height = "";
-    host.style.minHeight = chartH + "px";
-    host.style.height = chartH + "px";
-    try {
-      complaintTrendChart.options.maintainAspectRatio = true;
-      complaintTrendChart.options.aspectRatio = Math.max(0.15, w / chartH);
-      complaintTrendChart.resize();
-    } catch (e) {}
   }
 
   /** 手機直版：清除收合狀態（不顯示收合按鈕） */
@@ -7508,58 +7479,6 @@ function updateLangUI(){
       }
     }, { passive: true });
   }
-
-  // 手機版客訴線形圖：兩指上下滑調高度（單指不調，避免跟頁面捲動衝突）
-  (function setupComplaintTrendPinchResize() {
-    const card = document.querySelector(".complaint-line-card");
-    if (!card || card._complaintPinchBound) return;
-    let pinchResize = false;
-    let startCardH = 0;
-    let pinchStartMidY = 0;
-
-    function touchMidY(touches) {
-      if (!touches || touches.length < 2) return 0;
-      return (touches[0].clientY + touches[1].clientY) / 2;
-    }
-
-    card.addEventListener("touchstart", function (e) {
-      const n = e.touches ? e.touches.length : 0;
-      if (n >= 2) {
-        pinchResize = true;
-        pinchStartMidY = touchMidY(e.touches);
-        startCardH = Math.max(
-          80,
-          Number(window._complaintTrendCustomHeight) || Math.round(card.getBoundingClientRect().height || 0)
-        );
-      } else {
-        pinchResize = false;
-      }
-    }, { passive: true });
-
-    card.addEventListener("touchmove", function (e) {
-      const n = e.touches ? e.touches.length : 0;
-      if (n < 2) return;
-      if (!pinchResize) {
-        pinchResize = true;
-        pinchStartMidY = touchMidY(e.touches);
-        startCardH = Math.max(
-          80,
-          Number(window._complaintTrendCustomHeight) || Math.round(card.getBoundingClientRect().height || 0)
-        );
-      }
-      const midY = touchMidY(e.touches);
-      const dy = midY - pinchStartMidY;
-      window._complaintTrendCustomHeight = Math.max(80, startCardH + dy);
-      applyComplaintTrendCardCustomHeight();
-      if (e.cancelable) e.preventDefault();
-    }, { passive: false });
-
-    card.addEventListener("touchend", function (e) {
-      if (!e.touches || e.touches.length < 2) pinchResize = false;
-    }, { passive: true });
-
-    card._complaintPinchBound = true;
-  })();
 
   // 每 30 分鐘自動更新匯率
   setInterval(updateRates, 30*60*1000);

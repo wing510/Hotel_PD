@@ -5116,73 +5116,78 @@ function updateLangUI(){
   }
 
   /**
-   * L 圖列：僅「單一主題 + 相同件數」的房可合併（含「其他主題」）。
+   * L 圖列：主題組成完全相同（各主題件數也相同）的房可合併（含「其他主題」）。
    * 合併列長條 = 每房件數（不加總）；Y 軸「共N房」，房號畫在長條右側。
    */
+  function complaintBarSubjectSignature(subjMap) {
+    const keys = Object.keys(subjMap || {}).filter(function (k) {
+      return (subjMap[k] || 0) > 0;
+    });
+    keys.sort(function (a, b) {
+      return String(a).localeCompare(String(b), undefined, { numeric: true });
+    });
+    return keys
+      .map(function (k) {
+        return k + "@@" + String(subjMap[k]);
+      })
+      .join("||");
+  }
+
   function buildComplaintBarGroupedRows(roomSubjectCount, roomCount, noRoomLbl, groupLabelFn) {
-    const singles = [];
     const buckets = {};
     Object.keys(roomCount || {}).forEach(function (rm) {
       const subjMap = roomSubjectCount[rm] || {};
-      const keys = Object.keys(subjMap).filter(function (k) {
-        return (subjMap[k] || 0) > 0;
+      const subjects = {};
+      Object.keys(subjMap).forEach(function (k) {
+        const v = Number(subjMap[k]) || 0;
+        if (v > 0) subjects[k] = v;
       });
       const total = Number(roomCount[rm]) || 0;
-      if (keys.length !== 1) {
-        singles.push({
-          label: rm === "—" ? noRoomLbl : rm,
-          rooms: [rm],
-          subjects: Object.assign({}, subjMap),
+      const bkey = complaintBarSubjectSignature(subjects) || ("__empty__@@" + total);
+      if (!buckets[bkey]) {
+        buckets[bkey] = {
+          subjects: subjects,
           total: total,
-          groupSize: 1,
-          showRoomsRight: false
-        });
-        return;
+          rooms: []
+        };
       }
-      const only = keys[0];
-      const cnt = subjMap[only];
-      const bkey = only + "@@" + cnt;
-      if (!buckets[bkey]) buckets[bkey] = { subject: only, count: cnt, rooms: [] };
       buckets[bkey].rooms.push(rm);
     });
 
-    const grouped = Object.keys(buckets).map(function (bkey) {
-      const b = buckets[bkey];
-      b.rooms.sort(sortComplaintRoomKeys);
-      const n = b.rooms.length;
-      const subjects = {};
-      subjects[b.subject] = b.count;
-      if (n === 1) {
-        const rm = b.rooms[0];
+    return Object.keys(buckets)
+      .map(function (bkey) {
+        const b = buckets[bkey];
+        b.rooms.sort(sortComplaintRoomKeys);
+        const n = b.rooms.length;
+        if (n === 1) {
+          const rm = b.rooms[0];
+          return {
+            label: rm === "—" ? noRoomLbl : rm,
+            rooms: [rm],
+            subjects: Object.assign({}, b.subjects),
+            total: b.total,
+            groupSize: 1,
+            showRoomsRight: false
+          };
+        }
+        const lab =
+          typeof groupLabelFn === "function"
+            ? groupLabelFn(n)
+            : "共" + n + "房";
         return {
-          label: rm === "—" ? noRoomLbl : rm,
-          rooms: [rm],
-          subjects: subjects,
-          total: b.count,
-          groupSize: 1,
-          showRoomsRight: false
+          label: lab,
+          rooms: b.rooms.slice(),
+          subjects: Object.assign({}, b.subjects),
+          total: b.total,
+          groupSize: n,
+          showRoomsRight: true
         };
-      }
-      const lab =
-        typeof groupLabelFn === "function"
-          ? groupLabelFn(n)
-          : "共" + n + "房";
-      return {
-        label: lab,
-        rooms: b.rooms.slice(),
-        subjects: subjects,
-        total: b.count,
-        groupSize: n,
-        showRoomsRight: true,
-        subjectName: b.subject
-      };
-    });
-
-    return singles.concat(grouped).sort(function (a, b) {
-      if (b.total !== a.total) return b.total - a.total;
-      if ((b.groupSize || 1) !== (a.groupSize || 1)) return (b.groupSize || 1) - (a.groupSize || 1);
-      return String(a.label).localeCompare(String(b.label), undefined, { numeric: true });
-    });
+      })
+      .sort(function (a, b) {
+        if (b.total !== a.total) return b.total - a.total;
+        if ((b.groupSize || 1) !== (a.groupSize || 1)) return (b.groupSize || 1) - (a.groupSize || 1);
+        return String(a.label).localeCompare(String(b.label), undefined, { numeric: true });
+      });
   }
 
   /** Y 軸房號與該列長條垂直對齊：Chart.js 3 繪製軸文字時用 item.translation[1]（非 item.y）；並須在 drawLabels 之前寫入 _labelItems。 */
@@ -6036,7 +6041,7 @@ function updateLangUI(){
           ? C.barGroupRooms
           : function (n) { return "共" + n + "房"; };
       const topSubjects = topSubjectsForCharts;
-      /* 非前 N 併成「其他主題」後，再依「單一主題＋相同件數」彙整左邊 */
+      /* 非前 N 併成「其他主題」後，再依「相同主題組成＋各主題件數」彙整左邊 */
       const foldedSubjectCount = foldRoomSubjectsForChart(
         roomSubjectCount,
         topSubjects,

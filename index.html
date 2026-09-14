@@ -5146,7 +5146,7 @@ function updateLangUI(){
 
   /**
    * L 圖列：主題組成完全相同（各主題件數也相同）的房可合併（含「其他主題」）。
-   * 合併列長條 = 每房件數（不加總）；Y 軸「共N房」，房號畫在長條右側。
+   * 合併列長條 = 每單位件數（不加總）；Y 軸「共N房」以實際房號個數計（一格多房會拆開計）。
    */
   function complaintBarSubjectSignature(subjMap) {
     const keys = Object.keys(subjMap || {}).filter(function (k) {
@@ -5160,6 +5160,25 @@ function updateLangUI(){
         return k + "@@" + String(subjMap[k]);
       })
       .join("||");
+  }
+
+  /** 一筆 ROOM 可能是「007, 008, 010」；展開成個別房號並去重 */
+  function expandComplaintRoomList(roomKeys) {
+    const out = [];
+    const seen = {};
+    (roomKeys || []).forEach(function (rm) {
+      String(rm == null ? "" : rm)
+        .split(",")
+        .forEach(function (part) {
+          const t = String(part).trim();
+          if (!t || t === "—") return;
+          if (seen[t]) return;
+          seen[t] = true;
+          out.push(t);
+        });
+    });
+    out.sort(sortComplaintRoomKeys);
+    return out;
   }
 
   function buildComplaintBarGroupedRows(roomSubjectCount, roomCount, noRoomLbl, groupLabelFn) {
@@ -5187,8 +5206,8 @@ function updateLangUI(){
       .map(function (bkey) {
         const b = buckets[bkey];
         b.rooms.sort(sortComplaintRoomKeys);
-        const n = b.rooms.length;
-        if (n === 1) {
+        const nUnits = b.rooms.length;
+        if (nUnits === 1) {
           const rm = b.rooms[0];
           return {
             label: rm === "—" ? noRoomLbl : rm,
@@ -5199,16 +5218,18 @@ function updateLangUI(){
             showRoomsRight: false
           };
         }
+        const flatRooms = expandComplaintRoomList(b.rooms);
+        const nRooms = flatRooms.length || nUnits;
         const lab =
           typeof groupLabelFn === "function"
-            ? groupLabelFn(n)
-            : "共" + n + "房";
+            ? groupLabelFn(nRooms)
+            : "共" + nRooms + "房";
         return {
           label: lab,
-          rooms: b.rooms.slice(),
+          rooms: flatRooms,
           subjects: Object.assign({}, b.subjects),
           total: b.total,
-          groupSize: n,
+          groupSize: nRooms,
           showRoomsRight: true
         };
       })

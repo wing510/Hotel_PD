@@ -1142,55 +1142,53 @@ td.num, th.num {
   width: 100%;
   box-sizing: border-box;
 }
-/* 折線標題區：手機維持靠左堆疊；桌機才標題+期間同一行 */
+/* 折線：標題+期間同一行；僅直向手機改上下堆疊 */
 .chart-right .chart-titles {
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  justify-items: start;
+  column-gap: 10px;
+  row-gap: 2px;
   text-align: left;
   padding: 0 88px 0 0; /* 只預留右側年月鈕，標題區靠左 */
+  min-width: 0;
 }
 .chart-titles h2{
   margin: 0 0 6px;
   text-align: center;
 }
 .chart-right .chart-titles h2 {
+  grid-column: 1;
+  grid-row: 1;
   text-align: left;
   margin: 0;
+  white-space: nowrap;
 }
 .chart-right .chart-subtitle {
+  grid-column: 2;
+  grid-row: 1;
   margin: 0;
   text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 100%;
+}
+.chart-right .trend-legend-html:not([hidden]) {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin-top: 0;
 }
 @media (min-width: 769px) {
   .chart-right .chart-titles {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    align-items: center;
-    column-gap: 10px;
-    row-gap: 2px;
-  }
-  .chart-right .chart-titles h2 {
-    grid-column: 1;
-    grid-row: 1;
-    white-space: nowrap;
-  }
-  .chart-right .chart-subtitle {
-    grid-column: 2;
-    grid-row: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
-    max-width: 100%;
-  }
-  .chart-right .trend-legend-html:not([hidden]) {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    margin-top: 0;
+    padding: 0 88px 0 0;
   }
 }
 
-/* 僅手機直向：標題／期間上下堆疊（橫屏寬度常 ≤768，不可套這段） */
+/* 僅手機直向：標題／期間上下堆疊（橫屏不可套這段） */
 @media (max-width: 768px) and (orientation: portrait) {
   .chart-right .chart-titles {
     display: flex !important;
@@ -1205,6 +1203,9 @@ td.num, th.num {
   .chart-right .trend-legend-html:not([hidden]) {
     grid-column: auto !important;
     grid-row: auto !important;
+  }
+  .chart-right .chart-titles h2 {
+    white-space: normal;
   }
   .chart-right .chart-subtitle {
     white-space: normal;
@@ -1635,18 +1636,50 @@ td.num, th.num {
 .chart-right.trend-fs .chart-header {
   flex: 0 0 auto;
 }
-/* 滿版：標題靠左（對齊 Y 由 JS paddingLeft） */
+/* 滿版：標題+期間同一行（與橫屏一致；不依賴 orientation media） */
 .chart-right.trend-fs .chart-titles {
-  align-items: flex-start !important;
-  text-align: left !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  grid-template-rows: auto auto !important;
+  align-items: center !important;
   justify-items: start;
+  flex-direction: row !important;
+  column-gap: 10px;
+  row-gap: 2px;
+  min-width: 0;
+  text-align: left !important;
+  width: 100%;
+  padding: 0 100px 0 0;
+  box-sizing: border-box;
 }
-.chart-right.trend-fs .chart-titles h2,
+.chart-right.trend-fs .chart-titles h2 {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+  text-align: left !important;
+  font-size: 12px !important;
+}
 .chart-right.trend-fs .chart-subtitle {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  margin: 0 !important;
+  font-size: 10px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  min-width: 0;
+  max-width: 100%;
   text-align: left !important;
 }
 .chart-right.trend-fs .trend-legend-html:not([hidden]) {
+  grid-column: 1 / -1 !important;
+  grid-row: 2 !important;
+  display: flex !important;
   justify-content: flex-start !important;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-top: 0;
 }
 .chart-right.trend-fs > canvas {
   flex: 0 0 auto !important;

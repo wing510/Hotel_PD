@@ -1789,6 +1789,12 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
   gap: 6px;
   margin-left: 2px;
 }
+/* 桌機／橫屏：L/R 在「實際客訴…」左邊 */
+.complaints-meta .complaint-collapse-tools {
+  margin-left: 0;
+  margin-right: 4px;
+  align-self: center;
+}
 .complaints-toolbar .field.field-complaint-subject select {
   min-width: 0;
   width: 100%;
@@ -2730,12 +2736,12 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
         <div class="field field-complaint-subject">
           <select id="complaintSubjectFilter" aria-label="主題"></select>
         </div>
-        <div class="complaint-collapse-tools" id="complaintCollapseTools" role="group" aria-label="圖表收合">
+      </div>
+      <div class="complaints-meta" id="complaintsMetaRow">
+        <span class="complaint-collapse-tools" id="complaintCollapseTools" role="group" aria-label="圖表收合">
           <button type="button" class="complaint-collapse-btn complaint-collapse-bar" id="complaintBarCollapseBtn" aria-pressed="false" title="只看左圖 L">L</button>
           <button type="button" class="complaint-collapse-btn complaint-collapse-line" id="complaintLineCollapseBtn" aria-pressed="false" title="只看右圖 R">R</button>
-        </div>
-      </div>
-      <p class="complaints-meta" id="complaintsMetaRow">
+        </span>
         <span id="complaintsMeta"></span>
         <span class="complaints-meta-sep" id="complaintsMetaSep" hidden>|</span>
         <span id="subTitleComplaintTrend" class="complaints-meta-period"></span>
@@ -2744,7 +2750,7 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
           <button type="button" class="nav-btn nav-prev" aria-label="Previous period">‹</button>
           <button type="button" class="nav-btn nav-next" aria-label="Next period">›</button>
         </span>
-      </p>
+      </div>
       <div class="complaints-charts" id="complaintsChartsRow">
         <div class="compl-chart-card complaint-bar-card" id="complaintBarCard">
           <h3 id="titleComplaintByRoom"></h3>

@@ -1933,6 +1933,19 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+/* 手機直版：隱藏無客訴 下一行才放 實際客訴｜期間＋年‹›；桌機／橫屏維持同一行 */
+@media (max-width: 768px) and (orientation: portrait) {
+  .complaints-table-tools {
+    flex-wrap: wrap !important;
+    overflow-x: visible;
+  }
+  .complaints-table-tools .complaints-table-meta-inline {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+}
 .complaints-table-tools .chk {
   display: inline-flex !important;
   align-items: center;
@@ -3003,6 +3016,7 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
         sectionTitle: "客訴與維修紀錄",
         barOtherSubjects: "其他主題",
         barNoRoomLabel: "無房號",
+        barGroupRooms: (n) => `共${n}房`,
         collapseBar: "收合左側圖",
         expandBar: "展開左側圖",
         collapseLine: "收合右側圖",
@@ -3117,6 +3131,7 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
         sectionTitle: "Guest complaints & maintenance",
         barOtherSubjects: "Other subjects",
         barNoRoomLabel: "No room #",
+        barGroupRooms: (n) => `${n} rooms`,
         collapseBar: "Collapse left chart",
         expandBar: "Expand left chart",
         collapseLine: "Collapse right chart",
@@ -3229,6 +3244,7 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
         sectionTitle: "Komplain & perawatan",
         barOtherSubjects: "Subjek lain",
         barNoRoomLabel: "Tanpa nomor kamar",
+        barGroupRooms: (n) => `${n} kamar`,
         collapseBar: "Ciutkan grafik kiri",
         expandBar: "Bentangkan grafik kiri",
         collapseLine: "Ciutkan grafik kanan",
@@ -4499,11 +4515,31 @@ function updateLangUI(){
 
   // ===== 工具函式 =====
 
-  // 抓取 JSON 資料
+  // 抓取 JSON 資料（逾時避免 Loading 一直轉）
   async function fetchJSON(url){
-    const res = await fetch(url, { cache:'no-store' });
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    return await res.json();
+    const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const ms = 28000;
+    var timer = null;
+    if (ctrl) {
+      timer = setTimeout(function () {
+        try { ctrl.abort(); } catch (eAb) {}
+      }, ms);
+    }
+    try {
+      const res = await fetch(url, {
+        cache: "no-store",
+        signal: ctrl ? ctrl.signal : undefined
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return await res.json();
+    } catch (e) {
+      if (e && (e.name === "AbortError" || String(e.message || "").indexOf("aborted") !== -1)) {
+        throw new Error("連線逾時（" + Math.round(ms / 1000) + " 秒），請稍後再試或檢查 Apps Script");
+      }
+      throw e;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   // 轉換字串 → 數字
@@ -5041,6 +5077,112 @@ function updateLangUI(){
     s = String(s);
     if (s.length <= maxLen) return s;
     return s.slice(0, maxLen - 1) + "…";
+  }
+
+  function sortComplaintRoomKeys(a, b) {
+    if (a === "—") return 1;
+    if (b === "—") return -1;
+    const na = Number(a), nb = Number(b);
+    if (!isNaN(na) && !isNaN(nb) && String(na) === String(a) && String(nb) === String(b)) {
+      return na - nb;
+    }
+    return String(a).localeCompare(String(b), undefined, { numeric: true });
+  }
+
+  /**
+   * 前 N 大主題保留名稱；其餘併成「其他主題」後再做 L 圖彙整／堆疊。
+   */
+  function foldRoomSubjectsForChart(roomSubjectCount, topSubjects, otherLabel) {
+    const topSet = {};
+    (topSubjects || []).forEach(function (s) {
+      topSet[s] = true;
+    });
+    const otherLab = otherLabel || "其他主題";
+    const out = {};
+    Object.keys(roomSubjectCount || {}).forEach(function (rm) {
+      const src = roomSubjectCount[rm] || {};
+      const dst = {};
+      let other = 0;
+      Object.keys(src).forEach(function (s) {
+        const v = Number(src[s]) || 0;
+        if (!v) return;
+        if (topSet[s]) dst[s] = (dst[s] || 0) + v;
+        else other += v;
+      });
+      if (other > 0) dst[otherLab] = other;
+      out[rm] = dst;
+    });
+    return out;
+  }
+
+  /**
+   * L 圖列：僅「單一主題 + 相同件數」的房可合併（含「其他主題」）。
+   * 合併列長條 = 每房件數（不加總）；Y 軸「共N房」，房號畫在長條右側。
+   */
+  function buildComplaintBarGroupedRows(roomSubjectCount, roomCount, noRoomLbl, groupLabelFn) {
+    const singles = [];
+    const buckets = {};
+    Object.keys(roomCount || {}).forEach(function (rm) {
+      const subjMap = roomSubjectCount[rm] || {};
+      const keys = Object.keys(subjMap).filter(function (k) {
+        return (subjMap[k] || 0) > 0;
+      });
+      const total = Number(roomCount[rm]) || 0;
+      if (keys.length !== 1) {
+        singles.push({
+          label: rm === "—" ? noRoomLbl : rm,
+          rooms: [rm],
+          subjects: Object.assign({}, subjMap),
+          total: total,
+          groupSize: 1,
+          showRoomsRight: false
+        });
+        return;
+      }
+      const only = keys[0];
+      const cnt = subjMap[only];
+      const bkey = only + "@@" + cnt;
+      if (!buckets[bkey]) buckets[bkey] = { subject: only, count: cnt, rooms: [] };
+      buckets[bkey].rooms.push(rm);
+    });
+
+    const grouped = Object.keys(buckets).map(function (bkey) {
+      const b = buckets[bkey];
+      b.rooms.sort(sortComplaintRoomKeys);
+      const n = b.rooms.length;
+      const subjects = {};
+      subjects[b.subject] = b.count;
+      if (n === 1) {
+        const rm = b.rooms[0];
+        return {
+          label: rm === "—" ? noRoomLbl : rm,
+          rooms: [rm],
+          subjects: subjects,
+          total: b.count,
+          groupSize: 1,
+          showRoomsRight: false
+        };
+      }
+      const lab =
+        typeof groupLabelFn === "function"
+          ? groupLabelFn(n)
+          : "共" + n + "房";
+      return {
+        label: lab,
+        rooms: b.rooms.slice(),
+        subjects: subjects,
+        total: b.count,
+        groupSize: n,
+        showRoomsRight: true,
+        subjectName: b.subject
+      };
+    });
+
+    return singles.concat(grouped).sort(function (a, b) {
+      if (b.total !== a.total) return b.total - a.total;
+      if ((b.groupSize || 1) !== (a.groupSize || 1)) return (b.groupSize || 1) - (a.groupSize || 1);
+      return String(a.label).localeCompare(String(b.label), undefined, { numeric: true });
+    });
   }
 
   /** Y 軸房號與該列長條垂直對齊：Chart.js 3 繪製軸文字時用 item.translation[1]（非 item.y）；並須在 drawLabels 之前寫入 _labelItems。 */
@@ -5888,18 +6030,32 @@ function updateLangUI(){
 
     if (barCanvas && roomPairs.length) {
       const noRoomLbl = C.barNoRoomLabel || "—";
-      const chartRoomKeys = roomPairs.map(function (p) { return p[0]; });
-      const chartRoomLabels = chartRoomKeys.map(function (k) {
-        return k === "—" ? noRoomLbl : k;
-      });
+      const otherLabel = C.barOtherSubjects || "其他主題";
+      const groupLabFn =
+        typeof C.barGroupRooms === "function"
+          ? C.barGroupRooms
+          : function (n) { return "共" + n + "房"; };
       const topSubjects = topSubjectsForCharts;
-      const otherLabel = C.barOtherSubjects || "Other";
+      /* 非前 N 併成「其他主題」後，再依「單一主題＋相同件數」彙整左邊 */
+      const foldedSubjectCount = foldRoomSubjectsForChart(
+        roomSubjectCount,
+        topSubjects,
+        otherLabel
+      );
+      const barRows = buildComplaintBarGroupedRows(
+        foldedSubjectCount,
+        roomCount,
+        noRoomLbl,
+        groupLabFn
+      );
+      if (barRows.length) {
+      const chartRoomLabels = barRows.map(function (r) { return r.label; });
       const barStackBorder = "rgba(15,23,42,0.45)";
       const barStackBorderW = 1;
       const barEndRadius = 10;
 
       var barHost = document.getElementById("complaintBarHost");
-      var nRooms = chartRoomKeys.length;
+      var nRooms = barRows.length;
       var barDesktop =
         typeof window.matchMedia === "function" &&
         window.matchMedia("(min-width: 769px)").matches;
@@ -5970,9 +6126,8 @@ function updateLangUI(){
         const subj = topSubjects[si];
         var dsBar = {
           label: subj,
-          data: chartRoomKeys.map(function (room) {
-            const o = roomSubjectCount[room];
-            return o && o[subj] ? o[subj] : 0;
+          data: barRows.map(function (row) {
+            return row.subjects && row.subjects[subj] ? row.subjects[subj] : 0;
           }),
           backgroundColor: COMPLAINT_STACK_COLORS[si % COMPLAINT_STACK_COLORS.length],
           stack: "subj",
@@ -5985,13 +6140,8 @@ function updateLangUI(){
         datasets.push(dsBar);
       }
 
-      const otherCounts = chartRoomKeys.map(function (room) {
-        const o = roomSubjectCount[room] || {};
-        let sum = 0;
-        Object.keys(o).forEach(function (s) {
-          if (topSubjects.indexOf(s) === -1) sum += o[s];
-        });
-        return sum;
+      const otherCounts = barRows.map(function (row) {
+        return row.subjects && row.subjects[otherLabel] ? row.subjects[otherLabel] : 0;
       });
       if (otherCounts.some(function (v) { return v > 0; })) {
         var dsOther = {
@@ -6007,13 +6157,6 @@ function updateLangUI(){
         if (barDesktop) dsOther.maxBarThickness = barThicknessPx;
         datasets.push(dsOther);
       }
-
-      const barTooltipTotal =
-        currentLang === "zh"
-          ? function (t) { return "合計 " + t + " 筆"; }
-          : currentLang === "id"
-          ? function (t) { return "Jumlah: " + t; }
-          : function (t) { return "Total: " + t; };
 
       var barCanvasDpr =
         typeof window.devicePixelRatio === "number" && window.devicePixelRatio > 0
@@ -6064,6 +6207,50 @@ function updateLangUI(){
         }
       };
 
+      /* 合併列：長條右側列出房號 */
+      var complaintBarGroupRoomsPlugin = {
+        id: "complaintBarGroupRooms",
+        afterDatasetsDraw: function (chart) {
+          try {
+            var ctx = chart.ctx;
+            var area = chart.chartArea;
+            if (!ctx || !area || !barRows || !barRows.length) return;
+            ctx.save();
+            ctx.fillStyle = "#cbd5e1";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            var rFont = barDesktop ? 9 : 8;
+            ctx.font = rFont + "px system-ui,Segoe UI,sans-serif";
+            for (var i = 0; i < barRows.length; i++) {
+              var row = barRows[i];
+              if (!row || !row.showRoomsRight || !row.rooms || row.rooms.length < 2) continue;
+              var endX = null;
+              var midY = null;
+              for (var di = 0; di < chart.data.datasets.length; di++) {
+                var meta = chart.getDatasetMeta(di);
+                if (!meta || meta.hidden || !meta.data || !meta.data[i]) continue;
+                var el = meta.data[i];
+                var props = el.getProps(["x", "y", "base"], true);
+                if (endX == null || props.x > endX) endX = props.x;
+                midY = props.y;
+              }
+              if (endX == null || midY == null) continue;
+              var text = row.rooms.join(", ");
+              var maxW = Math.max(36, area.right - endX - 8);
+              var draw = text;
+              if (ctx.measureText(draw).width > maxW) {
+                while (draw.length > 4 && ctx.measureText(draw + "…").width > maxW) {
+                  draw = draw.slice(0, -1);
+                }
+                draw = draw.replace(/[,\s]+$/, "") + "…";
+              }
+              ctx.fillText(draw, endX + 8, midY);
+            }
+            ctx.restore();
+          } catch (eGrp) {}
+        }
+      };
+
       function mountComplaintBarChart() {
         try {
           var attached =
@@ -6078,7 +6265,7 @@ function updateLangUI(){
         }
         complaintBarChart = new Chart(barCanvas, {
           type: "bar",
-          plugins: [complaintBarSegmentLabelsPlugin],
+          plugins: [complaintBarSegmentLabelsPlugin, complaintBarGroupRoomsPlugin],
           data: {
             labels: chartRoomLabels,
             datasets: datasets
@@ -6090,7 +6277,7 @@ function updateLangUI(){
             /* 手機勿固定 1：Retina 會把 1× canvas 放大顯示，軸／圖例／自繪數字都變糊 */
             devicePixelRatio: barCanvasDpr,
             layout: {
-              padding: { bottom: 2, top: 0, left: 0, right: barDesktop ? 8 : 10 }
+              padding: { bottom: 2, top: 0, left: 0, right: barDesktop ? 12 : 10 }
             },
             datasets: {
               bar: {
@@ -6130,19 +6317,51 @@ function updateLangUI(){
                 }
               },
               tooltip: {
+                /* 依 Y 列對齊；列出該列全部非 0 主題，圖示用圓形 */
+                mode: "index",
+                axis: "y",
+                intersect: false,
+                displayColors: true,
+                usePointStyle: true,
+                boxWidth: 7,
+                boxHeight: 7,
+                filter: function (tooltipItem) {
+                  var v = tooltipItem.parsed && tooltipItem.parsed.x;
+                  return v != null && !isNaN(v) && Number(v) !== 0;
+                },
                 callbacks: {
+                  title: function (items) {
+                    if (!items.length) return "";
+                    var idx = items[0].dataIndex;
+                    var row = barRows[idx];
+                    if (row && row.groupSize > 1 && row.rooms) {
+                      var prefix = groupLabFn(row.groupSize);
+                      var rooms = row.rooms;
+                      var maxLen = barDesktop ? 44 : 36;
+                      var lines = [];
+                      var cur = prefix;
+                      for (var ri = 0; ri < rooms.length; ri++) {
+                        var chunk = (cur === prefix ? " " : ", ") + rooms[ri];
+                        if (cur.length + chunk.length > maxLen && cur !== prefix) {
+                          lines.push(cur);
+                          cur = rooms[ri];
+                        } else {
+                          cur += chunk;
+                        }
+                      }
+                      if (cur) lines.push(cur);
+                      return lines;
+                    }
+                    return row ? row.label : "";
+                  },
+                  labelPointStyle: function () {
+                    return { pointStyle: "circle", rotation: 0 };
+                  },
                   label: function (ctx) {
                     var px = ctx.parsed && ctx.parsed.x;
                     var v = px != null && !isNaN(px) ? px : ctx.raw;
-                    return String(ctx.dataset.label) + ": " + v;
-                  },
-                  footer: function (items) {
-                    if (!items.length) return "";
-                    let t = 0;
-                    for (let fi = 0; fi < items.length; fi++) {
-                      t += Number(items[fi].parsed.x) || 0;
-                    }
-                    return barTooltipTotal(t);
+                    var lab = ctx.dataset.label != null ? String(ctx.dataset.label) : "";
+                    return lab ? lab + ": " + v : String(v);
                   }
                 }
               }
@@ -6225,6 +6444,20 @@ function updateLangUI(){
         try { scheduleSyncComplaintLineHeightToBar(); } catch (eBarSync) {}
         try { setupComplaintLineHeightSyncObserver(); } catch (eObs2) {}
       }
+      } /* end barRows.length */
+      else {
+        var barVpEmpty = document.getElementById("complaintBarViewport");
+        if (barVpEmpty) barVpEmpty.scrollTop = 0;
+        var barHostEmpty = document.getElementById("complaintBarHost");
+        if (barHostEmpty) {
+          barHostEmpty.style.height = "";
+          barHostEmpty.style.minHeight = "";
+        }
+        try {
+          var ctxEmpty = barCanvas.getContext("2d");
+          if (ctxEmpty) ctxEmpty.clearRect(0, 0, barCanvas.width, barCanvas.height);
+        } catch (eClr) {}
+      }
     } else if (barCanvas && complaintBarChart === null) {
       var barVpClear = document.getElementById("complaintBarViewport");
       if (barVpClear) barVpClear.scrollTop = 0;
@@ -6253,7 +6486,6 @@ function updateLangUI(){
           if (!showY) return englishMonthLabel(m);
           return [String(y), englishMonthLabel(m)];
         });
-        const otherLabelTr = C.barOtherSubjects || "Other";
         const trendDatasets = [];
         if (subjectFilter) {
           trendDatasets.push({
@@ -6267,6 +6499,7 @@ function updateLangUI(){
             fill: true,
             tension: 0.25,
             pointRadius: 4,
+            pointStyle: "circle",
             pointBackgroundColor: COMPLAINT_STACK_COLORS[0],
             borderWidth: 2
           });
@@ -6285,10 +6518,12 @@ function updateLangUI(){
               fill: false,
               tension: 0.25,
               pointRadius: 3,
+              pointStyle: "circle",
               pointBackgroundColor: COMPLAINT_STACK_COLORS[di % COMPLAINT_STACK_COLORS.length],
               borderWidth: 2
             });
           }
+          const otherLabelTr = C.barOtherSubjects || "其他主題";
           const otherTrendData = monthKeys.map(function (mk) {
             const o = monthSubjectCount[mk] || {};
             let sumO = 0;
@@ -6306,6 +6541,7 @@ function updateLangUI(){
               fill: false,
               tension: 0.25,
               pointRadius: 3,
+              pointStyle: "circle",
               pointBackgroundColor: COMPLAINT_STACK_COLORS[COMPLAINT_STACK_COLORS.length - 1],
               borderWidth: 2
             });
@@ -6416,24 +6652,52 @@ function updateLangUI(){
                 position: "bottom",
                 align: "center",
                 labels: {
-                  boxWidth: 10,
-                  boxHeight: 10,
+                  boxWidth: 6,
+                  boxHeight: 6,
                   padding: complaintTrendMobile ? 4 : 6,
                   font: { size: ctLegend, weight: "500", family: "system-ui,Segoe UI,sans-serif" },
                   color: "#e5e7eb",
                   usePointStyle: true,
-                  pointStyle: "line",
-                  /* 總數與標題同一行靠右，不進底部圖例 */
+                  /* 總數與標題同一行靠右，不進底部圖例；圖例強制圓點 */
                   filter: function (item, data) {
                     var ds = data.datasets && data.datasets[item.datasetIndex];
                     return !(ds && ds.yAxisID === "y1");
+                  },
+                  generateLabels: function (chart) {
+                    var items = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                    return items
+                      .filter(function (item) {
+                        var ds = chart.data.datasets && chart.data.datasets[item.datasetIndex];
+                        return !(ds && ds.yAxisID === "y1");
+                      })
+                      .map(function (item) {
+                        item.pointStyle = "circle";
+                        item.usePointStyle = true;
+                        return item;
+                      });
                   }
                 }
               },
               tooltip: {
                 mode: "index",
                 intersect: false,
+                usePointStyle: true,
+                boxWidth: 10,
+                boxHeight: 10,
+                /* 數值為 0 不列出 */
+                filter: function (tooltipItem) {
+                  var v = tooltipItem.parsed && tooltipItem.parsed.y;
+                  return v != null && !isNaN(v) && Number(v) !== 0;
+                },
                 callbacks: {
+                  labelPointStyle: function (ctx) {
+                    var ds = ctx.dataset || {};
+                    /* 總數＝長條圖示；主題＝圓點 */
+                    if (ds.type === "bar" || ds.yAxisID === "y1") {
+                      return { pointStyle: "rect", rotation: 0 };
+                    }
+                    return { pointStyle: "circle", rotation: 0 };
+                  },
                   label: function (ctx) {
                     const v = ctx.parsed.y;
                     const lab = ctx.dataset.label != null ? String(ctx.dataset.label) : "";
@@ -7020,6 +7284,16 @@ function updateLangUI(){
 
   // ===== 初始化 =====
   async function init(){
+    /* 保險：最久 32 秒一定關掉 Loading，避免卡死 */
+    var forceHideTimer = setTimeout(function () {
+      try {
+        if (loadingOverlay && loadingOverlay.style.display !== "none") {
+          loadingOverlay.innerHTML = "<p>載入過久，已解除遮罩<br><small style='opacity:.8'>若無資料請檢查 Apps Script／重新整理</small></p>";
+          loadingOverlay.style.display = "none";
+        }
+      } catch (eForce) {}
+    }, 32000);
+
     try {
       const payload = await fetchJSON(DATA_URL);
       if (payload && payload.error) {
@@ -7039,12 +7313,20 @@ function updateLangUI(){
       }
     } catch(e){
       console.error("讀取資料失敗:", e);
-      loadingOverlay.innerHTML = "<p>讀取資料失敗，請檢查 API URL</p>";
-      // 失敗的時候也把遮罩拿掉，避免整頁不能點
-      loadingOverlay.style.display = "none";
+      var msg = (e && e.message) ? String(e.message) : String(e);
+      try {
+        loadingOverlay.innerHTML = "<p>讀取資料失敗<br><small style='opacity:.8'>" + msg + "</small><br>請檢查 API URL 或 Apps Script 部署</p>";
+      } catch (eMsg) {}
+      try { loadingOverlay.style.display = "none"; } catch (eHide0) {}
+      clearTimeout(forceHideTimer);
       return;
     }
 
+    /* 資料到手先關 Loading，避免 render 太久一直轉 */
+    try { loadingOverlay.style.display = "none"; } catch (eHide1) {}
+    clearTimeout(forceHideTimer);
+
+    try {
     if (periodStart) periodStart.value = '';
     if (periodEnd) periodEnd.value = '';
     if (periodYearStart) periodYearStart.value = '';
@@ -7143,9 +7425,14 @@ function updateLangUI(){
       bindComplaintRangeInput(cCtMaxEl);
       window._complaintListeners = true;
     }
-
-    // 隱藏 loading 畫面
-    loadingOverlay.style.display="none";
+    } catch (eInit) {
+      console.error("初始化失敗:", eInit);
+      var m2 = (eInit && eInit.message) ? String(eInit.message) : String(eInit);
+      try {
+        loadingOverlay.innerHTML = "<p>初始化失敗<br><small style='opacity:.8'>" + m2 + "</small></p>";
+        loadingOverlay.style.display = "none";
+      } catch (eHtml) {}
+    }
   }
 
   // ===== 事件監聽 =====

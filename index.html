@@ -1699,6 +1699,10 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
   margin-top: 12px;
   padding-top: 0;
   border-top: none;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 .complaints-toolbar {
   display: flex;
@@ -2101,8 +2105,17 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
   .complaints-charts.bar-collapsed .complaint-bar-card,
   .complaints-charts.line-collapsed .complaint-line-card {
     display: flex !important;
-    width: auto !important;
-    flex: 0 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex: 0 1 auto !important;
+  }
+  .complaints-charts.bar-collapsed .complaint-line-card,
+  .complaints-charts.line-collapsed .complaint-bar-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex: 0 1 auto !important;
   }
   .complaints-charts.bar-collapsed,
   .complaints-charts.line-collapsed {
@@ -2321,14 +2334,50 @@ body.trend-fs-open .chart-right.trend-fs .chart-fs-btn {
 @media (max-width: 768px) {
   .complaints-charts {
     flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow-x: hidden; /* 避免圖表／標題撐出視窗外 */
   }
-  /* 勿讓子卡片 flex-grow 吃滿區塊高度，否則折線圖卡片會被拉高、圖例底下出現一大塊空 */
+  /* 直向堆疊必須吃滿寬、可縮小；勿 flex-shrink:0 否則 canvas／標題會把右邊裁掉 */
   .complaints-charts .compl-chart-card {
-    flex: 0 0 auto;
-    flex-shrink: 0;
+    flex: 0 1 auto;
+    flex-shrink: 1;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
   }
   .complaints-charts .compl-chart-card.complaint-line-card {
     order: -1;
+  }
+  .complaint-line-titles {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    column-gap: 4px;
+    padding: 0 2px;
+  }
+  .complaint-line-titles h3 {
+    font-size: 10px !important;
+    max-width: 100%;
+  }
+  .complaint-trend-total-label {
+    font-size: 10px;
+    gap: 4px;
+    padding-right: 0;
+  }
+  .complaint-bar-host,
+  .complaint-bar-viewport,
+  .complaint-trend-host {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .complaint-trend-host canvas {
+    width: 100% !important;
+    max-width: 100% !important;
   }
   .complaint-bar-host {
     min-height: 160px;

@@ -6246,12 +6246,11 @@ function updateLangUI(){
         }
       };
 
-      /* 合併列：長條右側列出房號（手機改靠 tooltip，避免撐破窄卡片） */
+      /* 合併列：長條右側列出房號（超出圖表區以 … 截斷，避免撐破卡片） */
       var complaintBarGroupRoomsPlugin = {
         id: "complaintBarGroupRooms",
         afterDatasetsDraw: function (chart) {
           try {
-            if (!barDesktop) return;
             var ctx = chart.ctx;
             var area = chart.chartArea;
             if (!ctx || !area || !barRows || !barRows.length) return;
@@ -6262,7 +6261,7 @@ function updateLangUI(){
             ctx.fillStyle = "#cbd5e1";
             ctx.textAlign = "left";
             ctx.textBaseline = "middle";
-            var rFont = 9;
+            var rFont = barDesktop ? 9 : 8;
             ctx.font = rFont + "px system-ui,Segoe UI,sans-serif";
             for (var i = 0; i < barRows.length; i++) {
               var row = barRows[i];
